@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@supabase/supabase-js": ["./src/shims/supabase-js"]
     }
   },
   "include": [
