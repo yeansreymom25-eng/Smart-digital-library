@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 // UI components
-import Input from "../Component/Input";
-import Button from "../Component/Button";
-import Divider from "../Component/Divider";
-import SocialIcon from "../Component/Socialicon";
-import AuthStudentIllustration from "../Component/AuthStudentIllustration";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
+import Divider from "@/components/auth/Divider";
+import SocialIcon from "@/components/auth/Socialicon";
+import AuthStudentIllustration from "@/components/auth/AuthStudentIllustration";
+import AuthRoleSwitch from "@/components/auth/AuthRoleSwitch";
 import { AUTH_ROUTES, storePendingSignup } from "@/src/lib/authFlow";
 import { toFriendlyAuthMessage } from "@/src/lib/authMessages";
 import { signInWithSocialProvider, type SocialProvider } from "@/src/lib/socialAuth";
@@ -45,6 +46,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [accountRole, setAccountRole] = useState<"user" | "admin">("user");
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -82,6 +84,7 @@ export default function SignupPage() {
           fullName: fullName.trim(),
           email: email.trim().toLowerCase(),
           password,
+          role: accountRole,
         }),
       });
       const result = (await response.json()) as { success: boolean; message: string };
@@ -96,6 +99,7 @@ export default function SignupPage() {
         email: email.trim().toLowerCase(),
         fullName: fullName.trim(),
         password,
+        role: accountRole,
       });
       router.push(`${AUTH_ROUTES.otpVerify}?email=${encodeURIComponent(email.trim().toLowerCase())}&type=signup`);
     } catch {
@@ -120,103 +124,119 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent flex items-center">
-      <div className="auth-stage mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-8 lg:grid-cols-2 lg:items-center w-full">
-        {/* Title */}
-        <div className="auth-reveal auth-delay-1 lg:col-span-2 mb-2">
-          <h1 className="text-3xl font-semibold text-black">Registration</h1>
+    <div className="min-h-screen bg-white flex items-center">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-12 px-6 py-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center lg:gap-16 xl:gap-24">
+        <div className="relative z-20 w-full max-w-md lg:flex lg:h-[620px] lg:flex-col lg:justify-start lg:pt-14">
+          <h1 className="mb-8 text-center text-4xl font-bold text-black">Registration</h1>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Input
+              placeholder="Name"
+              type="text"
+              value={fullName}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
+            />
+
+            <Input
+              placeholder="Email"
+              type="email"
+              value={email}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            />
+
+            <Input
+              placeholder="Password"
+              type="password"
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              rightIcon={<EyeOffIcon />}
+            />
+
+            <Input
+              placeholder="Repeat Password"
+              type="password"
+              value={repeatPassword}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setRepeatPassword(e.target.value)}
+              rightIcon={<EyeOffIcon />}
+            />
+
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+              <label className="flex items-center gap-2 text-[11px] text-zinc-600">
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded-full text-white transition ${
+                    acceptedTerms ? "bg-[#7bd86b]" : "bg-zinc-300"
+                  }`}
+                >
+                  <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path
+                      d="M3.5 8.3l2.4 2.4 6-6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="sr-only"
+                />
+                <span>I accept the terms and privacy policy</span>
+              </label>
+
+              <AuthRoleSwitch value={accountRole} onChange={setAccountRole} />
+            </div>
+
+            {errorMsg && <div className="text-sm text-red-500">{errorMsg}</div>}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-[#5f97ee] hover:bg-[#4f87de] active:bg-[#3f76cd]"
+            >
+              {loading ? "Creating..." : "Create account"}
+            </Button>
+
+            <p className="pt-0.5 text-center text-[11px] text-zinc-500">
+              By creating an account or signing you agree to our{" "}
+              <span className="font-semibold text-black underline">Terms and Conditions</span>
+            </p>
+
+
+            <p className="text-center text-[11px] text-zinc-400">Continue with :</p>
+
+            <div className="flex items-center justify-center gap-6">
+              <SocialIcon
+                src="/User_Image/google.png"
+                alt="Google"
+                onClick={() => void handleSocialSignup("google")}
+                disabled={socialLoading !== null}
+              />
+              <SocialIcon
+                src="/User_Image/apple.png"
+                alt="Apple"
+                onClick={() => void handleSocialSignup("apple")}
+                disabled={socialLoading !== null}
+              />
+            </div>
+
+            {socialLoading ? (
+              <p className="text-center text-[11px] text-zinc-500">
+                Redirecting to {socialLoading === "google" ? "Google" : "Apple"}...
+              </p>
+            ) : null}
+
+            <p className="pt-2 text-center text-xs text-zinc-500">
+              Already have an account?{" "}
+              <Link href={AUTH_ROUTES.login} className="font-semibold text-black underline">
+                Login
+              </Link>
+            </p>
+          </form>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="auth-form-stack relative z-20 mt-2 space-y-5">
-          <Input
-            placeholder="Full name"
-            type="text"
-            value={fullName}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
-          />
-
-          <Input
-            placeholder="Email"
-            type="email"
-            value={email}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-          />
-
-          <Input
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-            rightIcon={<EyeOffIcon />}
-          />
-
-          <Input
-            placeholder="Repeat Password"
-            type="password"
-            value={repeatPassword}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setRepeatPassword(e.target.value)}
-            rightIcon={<EyeOffIcon />}
-          />
-
-          {/* Checkbox for terms acceptance */}
-          <label className="flex items-center gap-3 pt-1 text-xs text-zinc-700">
-            <input
-              type="checkbox"
-              checked={acceptedTerms}
-              onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className="h-4 w-4 accent-black"
-            />
-            <span>I accept the terms and privacy policy</span>
-          </label>
-
-          {/* Error message */}
-          {errorMsg && <div className="text-sm text-red-500">{errorMsg}</div>}
-
-          <Button type="submit" disabled={loading}>
-            {loading ? "Creating..." : "Create account"}
-          </Button>
-
-          <p className="pt-1 text-center text-[11px] text-zinc-500">
-            By creating an account or signing you agree to our{" "}
-            <span className="font-semibold text-black underline">Terms and Conditions</span>
-          </p>
-
-          <Divider />
-
-          <p className="text-center text-[11px] text-zinc-400">Continue with :</p>
-
-          <div className="flex items-center justify-center gap-6">
-            <SocialIcon
-              src="/google.png"
-              alt="Google"
-              onClick={() => void handleSocialSignup("google")}
-              disabled={socialLoading !== null}
-            />
-            <SocialIcon
-              src="/apple.png"
-              alt="Apple"
-              onClick={() => void handleSocialSignup("apple")}
-              disabled={socialLoading !== null}
-            />
-          </div>
-
-          {socialLoading ? (
-            <p className="text-center text-[11px] text-zinc-500">
-              Redirecting to {socialLoading === "google" ? "Google" : "Apple"}...
-            </p>
-          ) : null}
-
-          <p className="pt-2 text-center text-xs text-zinc-500">
-            Already have an account?{" "}
-            <Link href={AUTH_ROUTES.login} className="font-semibold text-black underline">
-              Login
-            </Link>
-          </p>
-        </form>
-
-        {/* Image (cannot block clicks) */}
-        <AuthStudentIllustration />
+        <AuthStudentIllustration imageSrc="/User_Image/Display.png" alt="Library display" />
       </div>
     </div>
   );

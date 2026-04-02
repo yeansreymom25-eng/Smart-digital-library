@@ -18,6 +18,7 @@ export type PendingSignup = {
   email: string;
   fullName: string;
   password: string;
+  role?: "user" | "admin";
 };
 
 export type SocialAuthIntent = "login" | "signup";

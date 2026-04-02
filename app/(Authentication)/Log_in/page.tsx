@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import AuthStudentIllustration from "@/components/auth/AuthStudentIllustration";
+import Button from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { AUTH_ROUTES } from "@/src/lib/authFlow";
 import { toFriendlyAuthMessage } from "@/src/lib/authMessages";
@@ -19,29 +21,16 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
 
-  const [shake, setShake] = useState(false);
-
-  function triggerShake() {
-    // restart animation reliably
-    setShake(false);
-    requestAnimationFrame(() => {
-      setShake(true);
-      window.setTimeout(() => setShake(false), 450);
-    });
-  }
-
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErrorMsg(null);
 
     if (!email.trim() || !password.trim()) {
-      triggerShake();
       return setErrorMsg("Please fill all fields.");
     }
 
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
-      triggerShake();
       return setErrorMsg(
         "Supabase keys are missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local."
       );
@@ -57,7 +46,6 @@ export default function LoginPage() {
 
       if (error) {
         setIsLoading(false);
-        triggerShake();
         return setErrorMsg(toFriendlyAuthMessage(error.message || "Login failed."));
       }
 
@@ -84,53 +72,77 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent flex items-center">
-      <div className="auth-stage mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-8 lg:grid-cols-2 lg:items-center w-full">
-        {/* Title */}
-        <div className="auth-reveal auth-delay-1 lg:col-span-2 mb-2">
-          <h1 className="text-4xl font-bold text-zinc-900">Welcome Back !!</h1>
-        </div>
-
-        {/* Left: Form */}
-        <div className="auth-reveal-left auth-delay-2 relative z-20 mt-2 w-full max-w-md">
-          <form onSubmit={handleLogin} className="auth-form-stack">
+    <div className="min-h-screen overflow-y-auto bg-white text-zinc-900 flex items-center">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-12 px-6 py-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center lg:gap-16 lg:py-6 xl:gap-24">
+        <div className="relative z-20 w-full max-w-md lg:flex lg:min-h-[580px] lg:flex-col lg:justify-start lg:pt-12">
+          <div className="mb-7 mt-1.5 flex h-16 items-center justify-center">
+            <h1 className="text-center text-4xl font-bold text-zinc-900">Welcome Back !!</h1>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4.5">
             <input
               type="email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-6 w-full rounded-full border border-zinc-200 px-6 py-4 text-sm text-zinc-900 outline-none focus:border-[#F4C9A6]"
+              className="h-14 w-full rounded-full border border-zinc-200 bg-white px-6 text-sm text-zinc-900 outline-none transition focus:border-[#5f97ee] focus:ring-4 focus:ring-[#5f97ee]/15"
             />
 
-            <div className="relative mt-6">
+            <div className="relative">
               <input
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-full border border-zinc-200 px-6 py-4 text-sm text-zinc-900 outline-none focus:border-[#F4C9A6]"
+                className="h-14 w-full rounded-full border border-zinc-200 bg-white px-6 pr-12 text-sm text-zinc-900 outline-none transition focus:border-[#5f97ee] focus:ring-4 focus:ring-[#5f97ee]/15"
               />
+              <span className="pointer-events-none absolute inset-y-0 right-5 flex items-center text-zinc-400">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M3 3l18 18"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M10.6 10.6A2 2 0 0012 16a2 2 0 001.4-.6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M9.9 5.1A10.3 10.3 0 0112 4c7 0 10 8 10 8a17 17 0 01-4.2 5.2"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M6.1 6.1C3.6 8.2 2 12 2 12s3 8 10 8c1.1 0 2.1-.2 3-.5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
             </div>
 
-            <div className="mt-3 text-right text-xs text-zinc-500">
+            <div className="text-right text-xs font-medium text-zinc-500">
               <Link href={AUTH_ROUTES.forgotPassword}>Forgot Password ?</Link>
-            </div>
-
-            <div className="mt-3 text-right text-xs text-zinc-500">
-              <Link href={AUTH_ROUTES.emailContinue}>Continue with email code</Link>
             </div>
 
             {errorMsg && <p className="mt-4 text-sm text-red-500">{errorMsg}</p>}
 
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="bg-[#5f97ee] hover:bg-[#4f87de] active:bg-[#3f76cd]"
+            >
+              {isLoading ? "Logging in..." : "Log In"}
+            </Button>
           </form>
 
-          <div className="auth-reveal auth-delay-3 my-8 flex items-center gap-4 text-xs text-zinc-400">
-            <div className="h-px flex-1 bg-zinc-200" />
-            or
-            <div className="h-px flex-1 bg-zinc-200" />
-          </div>
+          <p className="mt-4 text-center text-[11px] text-zinc-400">Continue with :</p>
 
-          <div className="auth-reveal auth-delay-4 flex items-center justify-center gap-8">
+          <div className="mt-3 flex items-center justify-center gap-8">
             <button
               type="button"
               onClick={() => void handleSocialLogin("google")}
@@ -138,7 +150,7 @@ export default function LoginPage() {
               className="rounded-full p-2 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Continue with Google"
             >
-              <Image src="/google.png" alt="Google" width={26} height={26} />
+              <Image src="/User_Image/google.png" alt="Google" width={26} height={26} />
             </button>
             <button
               type="button"
@@ -147,17 +159,17 @@ export default function LoginPage() {
               className="rounded-full p-2 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Continue with Apple"
             >
-              <Image src="/apple.png" alt="Apple" width={46} height={46} />
+              <Image src="/User_Image/apple.png" alt="Apple" width={46} height={46} />
             </button>
           </div>
 
           {socialLoading ? (
-            <p className="auth-reveal auth-delay-4 mt-3 text-center text-xs text-zinc-500">
+            <p className="mt-3 text-center text-xs text-zinc-500">
               Redirecting to {socialLoading === "google" ? "Google" : "Apple"}...
             </p>
           ) : null}
 
-          <p className="auth-reveal auth-delay-4 mt-6 text-center text-xs text-zinc-500">
+          <p className="mt-4 text-center text-xs text-zinc-500">
             Don’t have an account?{" "}
             <Link href={AUTH_ROUTES.signup} className="font-semibold text-zinc-900 underline">
               Sign Up
@@ -165,7 +177,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Right: Image (match Sign_up) */}
+        <AuthStudentIllustration imageSrc="/User_Image/Display.png" alt="Library display" />
       </div>
     </div>
   );
