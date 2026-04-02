@@ -623,7 +623,7 @@ export default function WelcomeLanding() {
                 className="pointer-events-none absolute left-1/2 top-[48%] z-0 -translate-y-1/2 text-[clamp(11rem,30vw,25rem)] font-semibold leading-none tracking-[-0.11em] text-[#dfe7e1]"
                 style={exploreNumberStyle}
               >
-                3
+                2
               </span>
 
               <div className="relative z-10 flex w-full max-w-5xl flex-col items-center gap-4 text-center lg:gap-5">
@@ -632,7 +632,7 @@ export default function WelcomeLanding() {
                 </div>
                 <div style={exploreTitleStyle}>
                   <h2 className="mt-4 text-[clamp(2.6rem,4.7vw,4.6rem)] font-semibold leading-[0.94] tracking-[-0.06em] text-zinc-950">
-                    3. Explore
+                    2. Explore
                   </h2>
                 </div>
 
