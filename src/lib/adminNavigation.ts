@@ -7,52 +7,52 @@ export type AdminNavItem = {
 export const adminNavigation: AdminNavItem[] = [
   {
     title: "Overview",
-    href: "/admin",
+    href: "/library-owner",
     description: "Entry point for the library owner workspace.",
   },
   {
     title: "Subscription",
-    href: "/admin/subscription",
+    href: "/library-owner/subscription",
     description: "Plan selection, billing, QR payment, and approval flow.",
   },
   {
     title: "Dashboard",
-    href: "/admin/dashboard",
+    href: "/library-owner/dashboard",
     description: "Library metrics, recent activity, and quick statistics.",
   },
   {
     title: "Books",
-    href: "/admin/books",
+    href: "/library-owner/books",
     description: "Manage books, files, covers, pricing, and visibility.",
   },
   {
     title: "Categories",
-    href: "/admin/categories",
+    href: "/library-owner/categories",
     description: "Create and organize book categories.",
   },
   {
     title: "Users",
-    href: "/admin/users",
+    href: "/library-owner/users",
     description: "Monitor reader accounts and account status.",
   },
   {
     title: "Transactions",
-    href: "/admin/transactions",
+    href: "/library-owner/transactions",
     description: "Review payments and verify proofs for paid plans.",
   },
   {
     title: "Analytics",
-    href: "/admin/analytics",
+    href: "/library-owner/analytics",
     description: "Charts and performance insights for the library.",
   },
   {
     title: "Reports",
-    href: "/admin/reports",
+    href: "/library-owner/reports",
     description: "Exportable reports and historical summaries.",
   },
   {
     title: "Profile",
-    href: "/admin/profile",
+    href: "/library-owner/profile",
     description: "Library owner profile and account settings.",
   },
 ];

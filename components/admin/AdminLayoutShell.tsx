@@ -10,7 +10,7 @@ export default function AdminLayoutShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const isSubscriptionOnboarding = pathname === "/admin/subscription";
+  const isSubscriptionOnboarding = pathname === "/library-owner/subscription";
 
   if (isSubscriptionOnboarding) {
     return (
@@ -22,7 +22,7 @@ export default function AdminLayoutShell({
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(191,219,254,0.92),_rgba(255,255,255,0.98)_42%,_rgba(239,246,255,1)_100%)] px-3 py-3 text-slate-900 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
-      <div className="grid min-h-[calc(100vh-1.5rem)] w-full gap-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid min-h-[calc(100vh-1.5rem)] w-full gap-5 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[370px_minmax(0,1fr)]">
         <AdminSidebar />
         <section className="space-y-8">{children}</section>
       </div>

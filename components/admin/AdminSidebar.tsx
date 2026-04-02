@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { adminNavigation } from "@/src/lib/adminNavigation";
 
 function NavIcon({ title }: { title: string }) {
-  const common = "h-4 w-4";
+  const common = "h-5 w-5";
 
   switch (title) {
     case "Dashboard":
@@ -86,23 +86,25 @@ export default function AdminSidebar() {
   const navItems = adminNavigation.filter((item) => item.title !== "Overview");
 
   return (
-    <aside className="flex min-h-[calc(100vh-2.5rem)] flex-col overflow-hidden rounded-[10px] border border-[#d9d9d9] bg-white shadow-[0_10px_30px_rgba(120,140,170,0.08)]">
-      <div className="border-b border-[#d9d9d9] px-5 py-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+    <aside className="flex min-h-[calc(100vh-2.5rem)] flex-col overflow-hidden rounded-[14px] border border-[#d9d9d9] bg-white shadow-[0_10px_30px_rgba(120,140,170,0.08)]">
+      <div className="border-b border-[#d9d9d9] px-6 py-6">
+        <div className="flex items-start gap-4">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
               <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
               <path d="M4 20a8 8 0 0 1 16 0" />
             </svg>
           </div>
           <div>
-            <h2 className="text-[1.05rem] font-bold text-slate-950">Library Owner</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Premium Plan</p>
+            <h2 className="text-[1.45rem] font-bold leading-none text-slate-950">
+              Library Owner
+            </h2>
+            <p className="mt-1 text-base text-slate-500">Premium Plan</p>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-3">
+      <nav className="flex-1 space-y-2 px-4 py-4">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
 
@@ -110,7 +112,7 @@ export default function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-sm transition ${
+              className={`flex items-center gap-4 rounded-[10px] px-4 py-3.5 text-lg transition ${
                 isActive
                   ? "bg-[linear-gradient(90deg,#5aa0f6,_#f6fbff)] font-medium text-white"
                   : "text-slate-800 hover:bg-slate-50"
@@ -127,12 +129,12 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      <div className="border-t border-[#d9d9d9] px-4 py-4">
+      <div className="border-t border-[#d9d9d9] px-5 py-5">
         <button
           type="button"
-          className="flex items-center gap-2 text-sm font-medium text-[#ff3b30] transition hover:opacity-80"
+          className="flex items-center gap-3 text-lg font-medium text-[#ff3b30] transition hover:opacity-80"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
             <path d="M14 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-3" />
             <path d="M10 12h10M17 7l5 5-5 5" />
           </svg>
