@@ -125,23 +125,23 @@ export default function AdminDashboardPage() {
   return (
     <section className="space-y-4">
       <div>
-        <h1 className="text-[2.1rem] font-bold leading-none text-slate-950">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-500">Overview of your library system</p>
+        <h1 className="text-[2rem] font-bold leading-none text-[#173b73] sm:text-[2.5rem]">Dashboard</h1>
+        <p className="mt-2 text-base text-[#4d6691]">Overview of your library system</p>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {topStats.map((card) => (
           <article
             key={card.title}
-            className="rounded-[6px] bg-[#4d98f0] px-4 py-3 text-white shadow-[0_10px_20px_rgba(77,152,240,0.14)]"
+            className="rounded-[10px] bg-[#4d98f0] px-4 py-4 text-white shadow-[0_10px_20px_rgba(77,152,240,0.14)]"
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm">{card.title}</p>
-                <p className="mt-2 text-3xl font-bold leading-none">{card.value}</p>
-                <p className="mt-3 text-[11px] text-white/80">{card.note}</p>
+              <div className="min-w-0">
+                <p className="text-sm leading-5 text-white/95">{card.title}</p>
+                <p className="mt-3 text-[2.1rem] font-bold leading-none sm:text-3xl">{card.value}</p>
+                <p className="mt-4 text-xs text-white/80">{card.note}</p>
               </div>
-              <div className="text-white/85">
+              <div className="shrink-0 text-white/85">
                 <StatIcon kind={card.icon} />
               </div>
             </div>
@@ -149,26 +149,26 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {overviewCards.map((card) => (
           <article
             key={card.title}
-            className="rounded-[8px] border border-[#cfcfcf] bg-white px-4 py-4 shadow-[0_8px_20px_rgba(132,145,165,0.05)]"
+            className="rounded-[10px] border border-[#cfcfcf] bg-white px-4 py-4 shadow-[0_8px_20px_rgba(132,145,165,0.05)]"
           >
             <div className="flex items-start justify-between gap-3">
-              <h2 className="text-[1.05rem] font-medium text-slate-950">{card.title}</h2>
-              <span className={card.title === "Total Purchases" ? "text-[#19b03c]" : "text-slate-500"}>
+              <h2 className="pr-3 text-base font-medium text-slate-950 sm:text-[1.05rem]">{card.title}</h2>
+              <span className={`shrink-0 ${card.title === "Total Purchases" ? "text-[#19b03c]" : "text-slate-500"}`}>
                 <StatIcon kind={card.icon} />
               </span>
             </div>
-            <p className="mt-9 text-4xl font-bold leading-none text-slate-950">{card.value}</p>
-            <p className="mt-10 text-sm text-slate-500">{card.note}</p>
+            <p className="mt-8 text-[2.4rem] font-bold leading-none text-slate-950 sm:text-4xl">{card.value}</p>
+            <p className="mt-8 text-sm text-slate-500">{card.note}</p>
           </article>
         ))}
       </div>
 
       <section className="rounded-[8px] border border-[#cfcfcf] bg-white shadow-[0_8px_20px_rgba(132,145,165,0.05)]">
-        <div className="border-b border-[#cfcfcf] px-6 py-4">
+        <div className="border-b border-[#cfcfcf] px-4 py-4 sm:px-6">
           <h2 className="text-[1.4rem] font-bold text-slate-950">Recent Transactions</h2>
         </div>
 
