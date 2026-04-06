@@ -1,9 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import AdminPageIntro from "@/components/admin/AdminPageIntro";
 import AdminPlaceholderCard from "@/components/admin/AdminPlaceholderCard";
 import { adminNavigation } from "@/src/lib/adminNavigation";
 
 export default function AdminOverviewPage() {
+  const visibleNavigation = adminNavigation;
+
   return (
     <>
       <AdminPageIntro
@@ -15,7 +19,9 @@ export default function AdminOverviewPage() {
       <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
         <AdminPlaceholderCard
           title="Planned admin modules"
-          items={adminNavigation.slice(1).map(
+          items={visibleNavigation
+            .filter((item) => item.title !== "Overview")
+            .map(
             (item) => `${item.title}: ${item.description}`
           )}
         />
@@ -23,7 +29,10 @@ export default function AdminOverviewPage() {
         <section className="rounded-[28px] border border-[#d8e7ff] bg-white/85 p-6 shadow-[0_18px_45px_rgba(118,156,208,0.12)] sm:p-8">
           <h2 className="text-xl font-black text-slate-950">Quick access</h2>
           <div className="mt-5 grid gap-3">
-            {adminNavigation.slice(1, 5).map((item) => (
+            {visibleNavigation
+              .filter((item) => item.title !== "Overview")
+              .slice(0, 5)
+              .map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

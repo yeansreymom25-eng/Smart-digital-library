@@ -2,7 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import {
+  activateAdminPlan,
+  readAdminSubscription,
+  submitAdminPlanForReview,
+  type AdminPlanName,
+} from "@/src/lib/adminSubscription";
+import { createAdminTransaction } from "@/src/lib/adminTransactions";
 
 type Plan = {
   name: "Normal" | "Premium" | "Pro";
@@ -96,7 +104,7 @@ function PlanIcon({
 }) {
   const toneClasses =
     tone === "amber"
-      ? "border-[#f2c46c] bg-[#fff0c8] text-[#d08b22]"
+      ? "border-[#d1b4ff] bg-[#f1e7ff] text-[#8a43d6]"
       : tone === "sky"
         ? "border-[#8bc7ff] bg-[#daf0ff] text-[#3490dc]"
         : "border-[#8de26a] bg-[#cfffaa] text-[#6cbc41]";
@@ -142,17 +150,35 @@ function FeatureDot() {
 }
 
 export default function AdminSubscriptionPage() {
+  const router = useRouter();
   const [isQrOpen, setIsQrOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [proofFileName, setProofFileName] = useState("");
-  const [paymentReference, setPaymentReference] = useState("");
-  const [paymentNote, setPaymentNote] = useState("");
-  const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(() => {
+    const savedSubscription = readAdminSubscription();
+    return savedSubscription.plan
+      ? plans.find((item) => item.name === savedSubscription.plan) ?? null
+      : null;
+  });
+  const [proofFileName, setProofFileName] = useState(() => {
+    return readAdminSubscription().proofFileName;
+  });
+  const [paymentReference, setPaymentReference] = useState(() => {
+    return readAdminSubscription().paymentReference;
+  });
+  const [paymentNote, setPaymentNote] = useState(() => {
+    return readAdminSubscription().paymentNote;
+  });
+  const [paymentSubmitted, setPaymentSubmitted] = useState(() => {
+    return readAdminSubscription().status === "pending";
+  });
+  const [subscriptionStatus, setSubscriptionStatus] = useState<
+    "not_selected" | "active" | "pending" | "rejected"
+  >(() => readAdminSubscription().status);
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
 
   function handleChoosePlan(plan: Plan) {
     setSelectedPlan(plan);
     setPaymentSubmitted(false);
+    setSubscriptionStatus("not_selected");
 
     if (plan.name === "Normal") {
       setProofFileName("");
@@ -179,7 +205,35 @@ export default function AdminSubscriptionPage() {
       return;
     }
 
+    const nextSubscription = submitAdminPlanForReview({
+      plan: selectedPlan.name,
+      proofFileName,
+      paymentReference: paymentReference.trim(),
+      paymentNote: paymentNote.trim(),
+    });
+    createAdminTransaction({
+      user: "Library Owner",
+      book: `${selectedPlan.name} Plan`,
+      type: "Subscription",
+      amount: selectedPlan.price,
+      date: new Date().toLocaleDateString("en-US"),
+      status: "Pending",
+      proofReference:
+        paymentReference.trim() || `Subscription proof uploaded: ${proofFileName}`,
+    });
+
+    setSubscriptionStatus(nextSubscription.status);
     setPaymentSubmitted(true);
+  }
+
+  function handleContinueNormalPlan() {
+    if (!selectedPlan) {
+      return;
+    }
+
+    const nextSubscription = activateAdminPlan(selectedPlan.name as AdminPlanName);
+    setSubscriptionStatus(nextSubscription.status);
+    router.push("/library-owner/dashboard");
   }
 
   return (
@@ -239,10 +293,10 @@ export default function AdminSubscriptionPage() {
               <p className="inline-flex rounded-full border border-[#c9dbfb] bg-white/70 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6789b0] shadow-[0_10px_24px_rgba(131,164,212,0.08)]">
                 Library Owner Onboarding
               </p>
-              <h1 className="mt-6 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl lg:text-[3.05rem]">
+              <h1 className="mt-6 text-[2.5rem] font-bold leading-none text-[#173b73]">
                 Subscribe to Manage Your Digital Library
               </h1>
-              <p className="mx-auto mt-5 max-w-3xl text-sm leading-7 text-slate-500 sm:text-base">
+              <p className="mx-auto mt-2 max-w-3xl text-base leading-7 text-[#4d6691]">
                 Choose the perfect plan to access powerful features for managing
                 your smart digital library
               </p>
@@ -373,6 +427,7 @@ export default function AdminSubscriptionPage() {
                     </p>
                     <button
                       type="button"
+                      onClick={handleContinueNormalPlan}
                       className="mt-4 rounded-xl bg-[#4794f1] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#327fe0]"
                     >
                       Continue to Dashboard
@@ -484,9 +539,10 @@ export default function AdminSubscriptionPage() {
                         {paymentSubmitted ? (
                           <button
                             type="button"
+                            onClick={() => router.push("/library-owner/transactions")}
                             className="rounded-xl bg-[#255fb4] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f549f]"
                           >
-                            Waiting for Approval
+                            View Pending Review
                           </button>
                         ) : null}
                       </div>

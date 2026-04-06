@@ -83,7 +83,9 @@ function NavIcon({ title }: { title: string }) {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const navItems = adminNavigation.filter((item) => item.title !== "Overview");
+  const navItems = adminNavigation.filter(
+    (item) => item.title !== "Overview" && item.title !== "Subscription"
+  );
 
   return (
     <aside className="flex min-h-[calc(100vh-2.5rem)] flex-col overflow-hidden rounded-[14px] border border-[#d9d9d9] bg-white shadow-[0_10px_30px_rgba(120,140,170,0.08)]">
@@ -127,6 +129,22 @@ export default function AdminSidebar() {
             </Link>
           );
         })}
+
+        <Link
+          href="/library-owner/subscription"
+          className={`flex items-center gap-4 rounded-[10px] border border-dashed border-[#cdddf6] px-4 py-3.5 text-lg transition ${
+            pathname === "/library-owner/subscription"
+              ? "bg-[linear-gradient(90deg,#5aa0f6,_#f6fbff)] font-medium text-white"
+              : "text-slate-800 hover:bg-slate-50"
+          }`}
+        >
+          <span className={pathname === "/library-owner/subscription" ? "text-white" : "text-slate-600"}>
+            <NavIcon title="Subscription" />
+          </span>
+          <span className={pathname === "/library-owner/subscription" ? "text-white" : "text-slate-800"}>
+            Subscription
+          </span>
+        </Link>
       </nav>
 
       <div className="border-t border-[#d9d9d9] px-5 py-5">
