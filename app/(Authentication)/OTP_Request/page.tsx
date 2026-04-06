@@ -3,6 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import AuthStudentIllustration from "@/components/auth/AuthStudentIllustration";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import { AUTH_ROUTES } from "@/src/lib/authFlow";
 import { toFriendlyAuthMessage } from "@/src/lib/authMessages";
 import { getClientAppOrigin } from "@/src/lib/siteUrl";
@@ -57,40 +60,60 @@ export default function OtpRequestPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <form onSubmit={sendOtp} className="w-full max-w-sm space-y-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Continue with email</h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            Enter an existing account email. We will send you a verification code and then sign you into the dashboard.
-          </p>
+    <div className="min-h-screen overflow-y-auto bg-white text-zinc-900 flex items-center">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-12 px-6 py-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center lg:gap-16 lg:py-6 xl:gap-24">
+        <div className="auth-form-enter relative z-20 w-full max-w-md lg:flex lg:min-h-[580px] lg:flex-col lg:justify-start lg:pt-12">
+          <div className="mb-7 mt-1.5 flex h-16 items-center justify-center">
+            <h1 className="text-center text-4xl font-bold text-zinc-900">Continue With Email</h1>
+          </div>
+
+          <form onSubmit={sendOtp} className="space-y-5">
+            <p className="text-center text-sm leading-6 text-zinc-500">
+              Enter your account email. We’ll send you a verification code so you can continue inside your account.
+            </p>
+
+            <Input
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              required
+            />
+
+            {msg && (
+              <p
+                className={`text-sm ${
+                  msg.toLowerCase().includes("sent") ? "text-emerald-600" : "text-red-500"
+                }`}
+              >
+                {msg}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-[#5f97ee] hover:bg-[#4f87de] active:bg-[#3f76cd]"
+            >
+              {loading ? "Sending..." : "Send verification code"}
+            </Button>
+
+            <p className="text-center text-xs text-zinc-500">
+              Don&apos;t have an account?{" "}
+              <Link href={AUTH_ROUTES.signup} className="font-semibold text-zinc-900 underline">
+                Create one first
+              </Link>
+            </p>
+          </form>
         </div>
 
-        <input
-          className="w-full rounded-xl border border-zinc-200 p-3"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          type="email"
-          required
-        />
-  
-        {msg && <p className={`text-sm ${msg.toLowerCase().includes("sent") ? "text-emerald-600" : "text-red-500"}`}>{msg}</p>}
-
-        <button
-          disabled={loading}
-          className="w-full rounded-xl bg-black p-3 text-white"
-        >
-          {loading ? "Sending..." : "Send verification code"}
-        </button>
-
-        <p className="text-center text-xs text-zinc-500">
-          Don&apos;t have an account?{" "}
-          <Link href={AUTH_ROUTES.signup} className="font-semibold text-zinc-900 underline">
-            Create one first
-          </Link>
-        </p>
-      </form>
+        <div className="auth-visual-enter">
+          <AuthStudentIllustration
+            imageSrc="/User_Image/Display.png"
+            alt="Library display while requesting a verification code"
+          />
+        </div>
+      </div>
     </div>
   );
 }

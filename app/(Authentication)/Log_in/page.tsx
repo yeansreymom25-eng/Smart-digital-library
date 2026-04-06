@@ -11,11 +11,53 @@ import { toFriendlyAuthMessage } from "@/src/lib/authMessages";
 import { signInWithSocialProvider, type SocialProvider } from "@/src/lib/socialAuth";
 import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
 
+function EyeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M10.6 10.6A2 2 0 0012 16a2 2 0 001.4-.6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.9 5.1A10.3 10.3 0 0112 4c7 0 10 8 10 8a17 17 0 01-4.2 5.2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M6.1 6.1C3.6 8.2 2 12 2 12s3 8 10 8c1.1 0 2.1-.2 3-.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +116,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen overflow-y-auto bg-white text-zinc-900 flex items-center">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-12 px-6 py-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center lg:gap-16 lg:py-6 xl:gap-24">
-        <div className="relative z-20 w-full max-w-md lg:flex lg:min-h-[580px] lg:flex-col lg:justify-start lg:pt-12">
+        <div className="auth-form-enter relative z-20 w-full max-w-md lg:flex lg:min-h-[580px] lg:flex-col lg:justify-start lg:pt-12">
           <div className="mb-7 mt-1.5 flex h-16 items-center justify-center">
             <h1 className="text-center text-4xl font-bold text-zinc-900">Welcome Back !!</h1>
           </div>
@@ -89,40 +131,20 @@ export default function LoginPage() {
 
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-14 w-full rounded-full border border-zinc-200 bg-white px-6 pr-12 text-sm text-zinc-900 outline-none transition focus:border-[#5f97ee] focus:ring-4 focus:ring-[#5f97ee]/15"
               />
-              <span className="pointer-events-none absolute inset-y-0 right-5 flex items-center text-zinc-400">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M3 3l18 18"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M10.6 10.6A2 2 0 0012 16a2 2 0 001.4-.6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M9.9 5.1A10.3 10.3 0 0112 4c7 0 10 8 10 8a17 17 0 01-4.2 5.2"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M6.1 6.1C3.6 8.2 2 12 2 12s3 8 10 8c1.1 0 2.1-.2 3-.5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute inset-y-0 right-5 flex items-center text-zinc-400 transition hover:text-zinc-600"
+              >
+                {showPassword ? <EyeIcon /> : <EyeOffIcon />}
+              </button>
             </div>
 
             <div className="text-right text-xs font-medium text-zinc-500">
@@ -177,7 +199,9 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <AuthStudentIllustration imageSrc="/User_Image/Display.png" alt="Library display" />
+        <div className="auth-visual-enter">
+          <AuthStudentIllustration imageSrc="/User_Image/Display.png" alt="Library display" />
+        </div>
       </div>
     </div>
   );

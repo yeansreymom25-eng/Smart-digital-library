@@ -1,6 +1,6 @@
 import UpdatePasswordClient, {
   type PasswordMode,
-} from "@/app/(Auth)/Update_Password/UpdatePasswordClient";
+} from "@/app/(Authentication)/Update_Password/UpdatePasswordClient";
 
 type UpdatePasswordPageProps = {
   searchParams?: Promise<{

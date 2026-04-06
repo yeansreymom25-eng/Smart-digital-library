@@ -14,6 +14,12 @@ import {
 } from "@/src/lib/profileDisplay";
 import { supabase } from "@/src/lib/supabaseClient";
 
+type ProfileRow = {
+  full_name?: string | null;
+  avatar_url?: string | null;
+  email?: string | null;
+};
+
 function NavItem({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
   const active = pathname === href;
@@ -85,7 +91,7 @@ export default function MainNavbar() {
         .from("profiles")
         .select("full_name,avatar_url,email")
         .eq("id", user.id)
-        .maybeSingle();
+        .maybeSingle() as { data: ProfileRow | null; error: unknown };
 
       if (!alive) {
         return;

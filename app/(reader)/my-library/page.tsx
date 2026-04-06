@@ -1,7 +1,10 @@
 import Image from "next/image";
+import Link from "next/link";
+import type { ReactNode } from "react";
 
 type LibraryBook = {
   id: string;
+  bookId: string;
   title: string;
   author: string;
   imageSrc: string;
@@ -18,6 +21,7 @@ type RentBook = LibraryBook & {
 const historyBooks: HistoryBook[] = [
   {
     id: "history-1",
+    bookId: "atomic-habits",
     title: "Atomic Habits",
     author: "James Clear",
     imageSrc: "/MainPage/Books/Atomic_habits.jpg",
@@ -25,6 +29,7 @@ const historyBooks: HistoryBook[] = [
   },
   {
     id: "history-2",
+    bookId: "atomic-habits",
     title: "Atomic Habits",
     author: "James Clear",
     imageSrc: "/MainPage/Books/Atomic_habits.jpg",
@@ -32,6 +37,7 @@ const historyBooks: HistoryBook[] = [
   },
   {
     id: "history-3",
+    bookId: "atomic-habits",
     title: "Atomic Habits",
     author: "James Clear",
     imageSrc: "/MainPage/Books/Atomic_habits.jpg",
@@ -39,6 +45,7 @@ const historyBooks: HistoryBook[] = [
   },
   {
     id: "history-4",
+    bookId: "atomic-habits",
     title: "Atomic Habits",
     author: "James Clear",
     imageSrc: "/MainPage/Books/Atomic_habits.jpg",
@@ -46,6 +53,7 @@ const historyBooks: HistoryBook[] = [
   },
   {
     id: "history-5",
+    bookId: "atomic-habits",
     title: "Atomic Habits",
     author: "James Clear",
     imageSrc: "/MainPage/Books/Atomic_habits.jpg",
@@ -53,6 +61,7 @@ const historyBooks: HistoryBook[] = [
   },
   {
     id: "history-6",
+    bookId: "atomic-habits",
     title: "Atomic Habits",
     author: "James Clear",
     imageSrc: "/MainPage/Books/Atomic_habits.jpg",
@@ -63,36 +72,87 @@ const historyBooks: HistoryBook[] = [
 const boughtBooks: LibraryBook[] = [
   {
     id: "buy-1",
+    bookId: "it-ends-with-us",
     title: "It Ends With Us",
     author: "Colleen Hoover",
     imageSrc: "/MainPage/Books/12132023_Book_Cover-Lessons_in_Chemistry_152020.jpg.webp",
   },
   {
     id: "buy-2",
+    bookId: "atomic-habits",
     title: "Atomic Habits",
     author: "James Clear",
     imageSrc: "/MainPage/Books/Atomic_habits.jpg",
   },
   {
     id: "buy-3",
+    bookId: "song-of-achilles",
     title: "Song of Achilles",
     author: "Madeline Miller",
     imageSrc: "/MainPage/Books/all-the-single-ladies.jpg.webp",
   },
   {
     id: "buy-4",
+    bookId: "thorns-and-roses",
     title: "A Court of Thorns and Roses",
     author: "Sarah J. Maas",
     imageSrc: "/MainPage/Books/The Castle In the Mist.jpeg",
   },
   {
     id: "buy-5",
+    bookId: "verity",
     title: "Verity",
     author: "Colleen Hoover",
     imageSrc: "/MainPage/Books/9780062390769_p0_v4_s600x595.jpg",
   },
   {
     id: "buy-6",
+    bookId: "life-impossible",
+    title: "The Life Impossible",
+    author: "Matt Haig",
+    imageSrc: "/MainPage/Books/9780399547003.jpeg",
+  },
+];
+
+const wantToReadBooks: LibraryBook[] = [
+  {
+    id: "want-1",
+    bookId: "castle-in-the-moon",
+    title: "The Great Gatsby",
+    author: "F. Scott Fitzgerald",
+    imageSrc: "/MainPage/Books/The Castle In the Moon.jpg",
+  },
+  {
+    id: "want-2",
+    bookId: "castle-in-the-mist",
+    title: "The Castle in the Mist",
+    author: "Amy Ephron",
+    imageSrc: "/MainPage/Books/The Castle In the Mist.jpeg",
+  },
+  {
+    id: "want-3",
+    bookId: "listen-for-the-lie",
+    title: "Listen for the Lie",
+    author: "Amy Tintera",
+    imageSrc: "/MainPage/Books/listen-for-the-lie.jpeg",
+  },
+  {
+    id: "want-4",
+    bookId: "favorites",
+    title: "The Favorites",
+    author: "Layne Fargo",
+    imageSrc: "/MainPage/Books/the-favorites.jpeg",
+  },
+  {
+    id: "want-5",
+    bookId: "verity",
+    title: "Verity",
+    author: "Colleen Hoover",
+    imageSrc: "/MainPage/Books/9780062390769_p0_v4_s600x595.jpg",
+  },
+  {
+    id: "want-6",
+    bookId: "life-impossible",
     title: "The Life Impossible",
     author: "Matt Haig",
     imageSrc: "/MainPage/Books/9780399547003.jpeg",
@@ -102,6 +162,7 @@ const boughtBooks: LibraryBook[] = [
 const rentedBooks: RentBook[] = [
   {
     id: "rent-1",
+    bookId: "atomic-habits",
     title: "Atomic Habits",
     author: "James Clear",
     imageSrc: "/MainPage/Books/Atomic_habits.jpg",
@@ -109,6 +170,7 @@ const rentedBooks: RentBook[] = [
   },
   {
     id: "rent-2",
+    bookId: "it-ends-with-us",
     title: "It Ends With Us",
     author: "Colleen Hoover",
     imageSrc: "/MainPage/Books/12132023_Book_Cover-Lessons_in_Chemistry_152020.jpg.webp",
@@ -116,6 +178,7 @@ const rentedBooks: RentBook[] = [
   },
   {
     id: "rent-3",
+    bookId: "life-impossible",
     title: "The Life Impossible",
     author: "Matt Haig",
     imageSrc: "/MainPage/Books/9780399547003.jpeg",
@@ -131,8 +194,9 @@ function BookCover({
   widthClass?: string;
 }) {
   return (
-    <div
-      className={`relative aspect-[2/3] overflow-hidden rounded-[0.45rem] border border-black/5 shadow-[0_14px_28px_rgba(15,23,42,0.1)] ${widthClass}`}
+    <Link
+      href={`/book/${book.bookId}/read`}
+      className={`relative block aspect-[2/3] overflow-hidden rounded-[0.45rem] border border-black/5 shadow-[0_14px_28px_rgba(15,23,42,0.1)] ${widthClass}`}
     >
       <Image
         src={book.imageSrc}
@@ -141,13 +205,40 @@ function BookCover({
         className="object-cover"
         sizes="160px"
       />
-    </div>
+    </Link>
   );
 }
 
-function SectionTitle({ title, suffix }: { title: string; suffix?: string }) {
+function BookmarkFillIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M7 3.75A2.25 2.25 0 0 1 9.25 1.5h5.5A2.25 2.25 0 0 1 17 3.75v17.38a.75.75 0 0 1-1.18.615L12 18.99l-3.82 2.755A.75.75 0 0 1 7 21.13V3.75Z" />
+    </svg>
+  );
+}
+
+function SectionTitle({
+  title,
+  suffix,
+  icon,
+}: {
+  title: string;
+  suffix?: string;
+  icon?: ReactNode;
+}) {
   return (
     <div className="flex items-center gap-1.5">
+      {icon ? (
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eef3ff] text-[#3f76cd] shadow-[0_6px_14px_rgba(95,151,238,0.15)]">
+          {icon}
+        </span>
+      ) : null}
       <h2 className="text-[1.5rem] font-semibold tracking-[-0.04em] text-[#232833]">{title}</h2>
       {suffix ? <span className="text-[1.15rem] text-[#a1aab7]">{suffix}</span> : null}
     </div>
@@ -209,6 +300,17 @@ export default function MyLibraryPage() {
           <div className="mt-5 flex gap-6 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {historyBooks.map((book) => (
               <HistoryBookCard key={book.id} book={book} />
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-black/5 bg-[linear-gradient(180deg,#ffffff_0%,#f9fbfd_100%)] px-5 py-6 shadow-[0_18px_34px_rgba(15,23,42,0.06)] sm:px-6">
+          <SectionTitle title="Want to read" suffix="›" icon={<BookmarkFillIcon />} />
+          <div className="mt-5 flex gap-7 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {wantToReadBooks.map((book) => (
+              <div key={book.id} className="flex-shrink-0">
+                <BookCover book={book} widthClass="w-[9.6rem] sm:w-[10.4rem] lg:w-[11rem]" />
+              </div>
             ))}
           </div>
         </section>

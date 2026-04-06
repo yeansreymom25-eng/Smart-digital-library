@@ -7,7 +7,6 @@ import Link from "next/link";
 // UI components
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import Divider from "@/components/auth/Divider";
 import SocialIcon from "@/components/auth/Socialicon";
 import AuthStudentIllustration from "@/components/auth/AuthStudentIllustration";
 import AuthRoleSwitch from "@/components/auth/AuthRoleSwitch";
@@ -15,9 +14,24 @@ import { AUTH_ROUTES, storePendingSignup } from "@/src/lib/authFlow";
 import { toFriendlyAuthMessage } from "@/src/lib/authMessages";
 import { signInWithSocialProvider, type SocialProvider } from "@/src/lib/socialAuth";
 
+function EyeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
 function EyeOffIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path
         d="M10.6 10.6A2 2 0 0012 16a2 2 0 001.4-.6"
@@ -46,6 +60,8 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRepeatPassword, setShowRepeatPassword] = useState(false);
   const [accountRole, setAccountRole] = useState<"user" | "admin">("user");
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
@@ -126,7 +142,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-white flex items-center">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-12 px-6 py-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center lg:gap-16 xl:gap-24">
-        <div className="relative z-20 w-full max-w-md lg:flex lg:h-[620px] lg:flex-col lg:justify-start lg:pt-14">
+        <div className="auth-form-enter relative z-20 w-full max-w-md lg:flex lg:h-[620px] lg:flex-col lg:justify-start lg:pt-14">
           <h1 className="mb-8 text-center text-4xl font-bold text-black">Registration</h1>
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
@@ -145,18 +161,22 @@ export default function SignupPage() {
 
             <Input
               placeholder="Password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-              rightIcon={<EyeOffIcon />}
+              rightIcon={showPassword ? <EyeIcon /> : <EyeOffIcon />}
+              onRightIconClick={() => setShowPassword((value) => !value)}
+              rightIconLabel={showPassword ? "Hide password" : "Show password"}
             />
 
             <Input
               placeholder="Repeat Password"
-              type="password"
+              type={showRepeatPassword ? "text" : "password"}
               value={repeatPassword}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setRepeatPassword(e.target.value)}
-              rightIcon={<EyeOffIcon />}
+              rightIcon={showRepeatPassword ? <EyeIcon /> : <EyeOffIcon />}
+              onRightIconClick={() => setShowRepeatPassword((value) => !value)}
+              rightIconLabel={showRepeatPassword ? "Hide repeated password" : "Show repeated password"}
             />
 
             <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
@@ -236,7 +256,9 @@ export default function SignupPage() {
           </form>
         </div>
 
-        <AuthStudentIllustration imageSrc="/User_Image/Display.png" alt="Library display" />
+        <div className="auth-visual-enter">
+          <AuthStudentIllustration imageSrc="/User_Image/Display.png" alt="Library display" />
+        </div>
       </div>
     </div>
   );

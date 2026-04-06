@@ -23,7 +23,7 @@ const topStats = [
     note: "Awaiting verification",
     icon: "clock",
   },
-];
+] as const;
 
 const overviewCards = [
   {
@@ -44,7 +44,7 @@ const overviewCards = [
     note: "Currently available",
     icon: "book",
   },
-];
+] as const;
 
 const transactions = [
   {

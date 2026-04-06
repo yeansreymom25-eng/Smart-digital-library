@@ -4,18 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import DropdownAccountPanel from "@/components/main/account/DropdownAccountPanel";
 
 const primaryLinks = [
   { href: "/home", label: "Home" },
   { href: "/explore", label: "Explore" },
   { href: "/my-library", label: "My Library" },
   { href: "/discount", label: "Discount" },
-];
-
-const accountLinks = [
-  { href: "/profile", label: "Profile" },
-  { href: "/settings", label: "Setting" },
-  { href: "/transactions", label: "Transaction" },
 ];
 
 function SearchIcon() {
@@ -170,65 +165,46 @@ export default function ReaderMainNavigation() {
         </div>
       </header>
 
-      <div
-        className={`fixed inset-0 z-50 transition-opacity duration-300 ${
-          menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      >
-        <button
-          type="button"
-          aria-label="Close account menu"
-          onClick={() => setMenuOpen(false)}
-          className="absolute inset-0 bg-white/12 backdrop-blur-[5px]"
-        />
+      {menuOpen ? (
+        <div className="fixed inset-0 z-50 opacity-100 transition-opacity duration-300">
+          <button
+            type="button"
+            aria-label="Close account menu"
+            onClick={() => setMenuOpen(false)}
+            className="absolute inset-0 bg-white/12 backdrop-blur-[5px]"
+          />
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 px-4 pt-24 sm:px-6 lg:px-8">
-          <div className="mx-auto flex w-full max-w-[96rem] justify-end">
-            <div
-              className={`pointer-events-auto w-full max-w-[24.5rem] rounded-[2.2rem] border border-white/85 bg-white/93 p-6 shadow-[0_26px_50px_rgba(15,23,42,0.18)] backdrop-blur-[12px] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                menuOpen
-                  ? "translate-y-0 scale-100 opacity-100"
-                  : "-translate-y-3 scale-[0.98] opacity-0"
-              }`}
-            >
-              <p className="text-[0.9rem] font-medium tracking-[0.01em] text-[#818a99]">Account</p>
+          <div className="absolute inset-x-0 top-0 px-4 pt-24 sm:px-6 lg:px-8">
+            <div className="mx-auto flex w-full max-w-[96rem] justify-end">
+              <div className="w-full max-w-[24.5rem] rounded-[2.2rem] border border-white/85 bg-white/93 p-6 shadow-[0_26px_50px_rgba(15,23,42,0.18)] backdrop-blur-[12px] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] translate-y-0 scale-100 opacity-100">
+                <p className="text-[0.9rem] font-medium tracking-[0.01em] text-[#818a99]">Account</p>
 
-              <div className="mt-4 flex items-center gap-3.5">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-[0_10px_20px_rgba(15,23,42,0.08)]">
-                  <ProfileIcon />
+                <div className="mt-4 flex items-center gap-3.5">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-[0_10px_20px_rgba(15,23,42,0.08)]">
+                    <ProfileIcon />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[1.15rem] font-semibold tracking-[-0.03em] text-[#1e2430]">
+                      Smart Reader
+                    </p>
+                    <p className="truncate text-sm text-[#657083]">reader@smartlibrary.app</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[1.15rem] font-semibold tracking-[-0.03em] text-[#1e2430]">
-                    Smart Reader
-                  </p>
-                  <p className="truncate text-sm text-[#657083]">reader@smartlibrary.app</p>
-                </div>
-              </div>
 
-              <div className="mt-5 grid gap-3">
-                {accountLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMenuOpen(false)}
-                    className="rounded-[1.1rem] border border-[#e3e8ef] bg-white px-4 py-3.5 text-sm font-medium text-[#556072] transition hover:bg-[#fbfcff] hover:text-[#1f2430]"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
+                <DropdownAccountPanel onNavigate={() => setMenuOpen(false)} />
 
-              <Link
-                href="/Log_in"
-                onClick={() => setMenuOpen(false)}
-                className="mt-5 flex w-full items-center justify-center rounded-full bg-black px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#1f2430]"
-              >
-                Log out
-              </Link>
+                <Link
+                  href="/Log_in"
+                  onClick={() => setMenuOpen(false)}
+                  className="mt-5 flex w-full items-center justify-center rounded-full bg-black px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#1f2430]"
+                >
+                  Log out
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 }

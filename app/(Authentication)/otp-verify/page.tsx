@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import AuthStudentIllustration from "@/components/auth/AuthStudentIllustration";
+import Button from "@/components/ui/Button";
 import { AUTH_ROUTES, clearPendingSignup, readPendingSignup } from "@/src/lib/authFlow";
 import { toFriendlyAuthMessage } from "@/src/lib/authMessages";
 import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
@@ -312,22 +313,15 @@ function OTPVerifyInner() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent">
-      {/* Top nav (same style as your Figma screenshot) */}
-      {/* Main layout */}
-      <main className="mx-auto flex min-h-[80vh] max-w-6xl items-center justify-center px-20 py-16">
-        <div className="grid w-full grid-cols-1 items-center gap-16 lg:grid-cols-2">
-          {/* OTP Card */}
-          <section className="flex justify-center lg:justify-start">
-            <div className="auth-panel auth-delay-1 surface-card flex w-full max-w-[520px] min-h-[560px] flex-col rounded-3xl px-10 py-14 md:px-12">
-              <div>
-                <h1 className="text-center text-4xl font-semibold text-zinc-900">
-                  Check your email
-                </h1>
-              </div>
-              <div className="h-8" />
-              <div className="auth-form-stack">
-                <p className="mt-1 text-center text-sm text-zinc-400">
+    <div className="min-h-screen overflow-y-auto bg-white text-zinc-900 flex items-center">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-12 px-6 py-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center lg:gap-16 lg:py-6 xl:gap-24">
+        <div className="auth-form-enter relative z-20 w-full max-w-md lg:flex lg:min-h-[580px] lg:flex-col lg:justify-start lg:pt-12">
+          <div className="mb-7 mt-1.5 flex h-16 items-center justify-center">
+            <h1 className="text-center text-4xl font-bold text-zinc-900">Check Your Email</h1>
+          </div>
+
+          <div className="space-y-5">
+            <p className="text-center text-sm leading-6 text-zinc-500">
                   {type === "recovery"
                     ? "We sent a reset verification email to "
                     : type === "login"
@@ -335,53 +329,53 @@ function OTPVerifyInner() {
                     : "We sent a verification email to "}
                   <span className="font-medium text-zinc-700"> {email ?? "your email"}</span>
                   . Enter the 8-digit verification code below to continue.
-                </p>
+            </p>
 
-                <div className="mt-6 flex flex-wrap justify-center gap-3 md:gap-4">
-                  {otp.map((digit, index) => (
-                    <input
-                      key={index}
-                      id={`otp-${index}`}
-                      inputMode="numeric"
-                      autoComplete={index === 0 ? "one-time-code" : "off"}
-                      type="text"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => setDigit(index, e.target.value)}
-                      onKeyDown={(e) => onKeyDown(index, e)}
-                      className="h-14 w-14 rounded-2xl border border-zinc-200 bg-white text-center text-xl font-semibold text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 md:h-16 md:w-16 md:text-2xl"
-                    />
-                  ))}
-                </div>
+            <div className="flex flex-wrap justify-center gap-3 md:gap-4">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  id={`otp-${index}`}
+                  inputMode="numeric"
+                  autoComplete={index === 0 ? "one-time-code" : "off"}
+                  type="text"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => setDigit(index, e.target.value)}
+                  onKeyDown={(e) => onKeyDown(index, e)}
+                  className="h-14 w-14 rounded-2xl border border-zinc-200 bg-white text-center text-xl font-semibold text-zinc-900 outline-none transition focus:border-[#5f97ee] focus:ring-4 focus:ring-[#5f97ee]/15 md:h-16 md:w-16 md:text-2xl"
+                />
+              ))}
+            </div>
 
-                <div className="mt-5 text-center text-xs text-zinc-500">
-                  Didn’t receive code?{" "}
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={cooldown > 0}
-                    className="font-semibold text-emerald-600 underline underline-offset-2 disabled:opacity-40"
-                  >
-                    {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend OTP"}
-                  </button>
-                </div>
+            <div className="text-center text-xs text-zinc-500">
+              Didn’t receive code?{" "}
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={cooldown > 0}
+                className="font-semibold text-[#5f97ee] underline underline-offset-2 disabled:opacity-40"
+              >
+                {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend OTP"}
+              </button>
+            </div>
 
-                  {message && (
-                  <p
-                    className={`mt-5 text-center text-sm ${
-                      message.toLowerCase().includes("sent") ? "text-emerald-600" : "text-red-500"
-                    }`}
-                  >
-                    {message}
-                  </p>
-                )}
+            {message && (
+              <p
+                className={`text-center text-sm ${
+                  message.toLowerCase().includes("sent") ? "text-emerald-600" : "text-red-500"
+                }`}
+              >
+                {message}
+              </p>
+            )}
 
-                <button
-                  type="button"
-                  onClick={handleVerify}
-                  disabled={loading || linkModeLoading || finalOtp.length !== 8}
-                  className="mt-7 h-11 w-full rounded-full bg-zinc-900 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+            <Button
+              type="button"
+              onClick={handleVerify}
+              disabled={loading || linkModeLoading || finalOtp.length !== 8}
+              className="bg-[#5f97ee] hover:bg-[#4f87de] active:bg-[#3f76cd]"
+            >
                   {loading || linkModeLoading
                     ? "Verifying..."
                     : type === "recovery"
@@ -389,29 +383,32 @@ function OTPVerifyInner() {
                       : type === "login"
                         ? "Continue to dashboard"
                         : "Verify account"}
-                </button>
+            </Button>
 
-                <div className="mt-6 text-center text-xs text-zinc-400">
-                  <Link
-                    href={
-                      type === "login"
-                        ? AUTH_ROUTES.emailContinue
-                        : type === "recovery"
-                          ? AUTH_ROUTES.login
-                          : AUTH_ROUTES.signup
-                    }
-                    className="underline underline-offset-2 hover:text-zinc-600"
-                  >
-                    Change email
-                  </Link>
-                </div>
-              </div>
+            <div className="text-center text-xs text-zinc-500">
+              <Link
+                href={
+                  type === "login"
+                    ? AUTH_ROUTES.emailContinue
+                    : type === "recovery"
+                      ? AUTH_ROUTES.login
+                      : AUTH_ROUTES.signup
+                }
+                className="font-semibold underline underline-offset-2 hover:text-zinc-700"
+              >
+                Change email
+              </Link>
             </div>
-          </section>
-
-          <AuthStudentIllustration alt="Student waiting for an email verification code" />
+          </div>
         </div>
-      </main>
+
+        <div className="auth-visual-enter">
+          <AuthStudentIllustration
+            imageSrc="/User_Image/Display.png"
+            alt="Library display while entering a verification code"
+          />
+        </div>
+      </div>
     </div>
   );
 }

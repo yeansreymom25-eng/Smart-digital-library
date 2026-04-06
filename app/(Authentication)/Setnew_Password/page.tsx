@@ -4,8 +4,51 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthStudentIllustration from "@/components/auth/AuthStudentIllustration";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import { AUTH_ROUTES } from "@/src/lib/authFlow";
 import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
+
+function EyeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M10.6 10.6A2 2 0 0012 16a2 2 0 001.4-.6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.9 5.1A10.3 10.3 0 0112 4c7 0 10 8 10 8a17 17 0 01-4.2 5.2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M6.1 6.1C3.6 8.2 2 12 2 12s3 8 10 8c1.1 0 2.1-.2 3-.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 function getTokensFromHash() {
   if (typeof window === "undefined") return null;
@@ -25,6 +68,8 @@ export default function SetNewPasswordPage() {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string>("");
   const [ready, setReady] = useState(false);
@@ -139,83 +184,76 @@ export default function SetNewPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent">
-      <main className="mx-auto flex min-h-[80vh] max-w-6xl items-center justify-center px-6 py-16 md:px-20">
-        <div className="grid w-full grid-cols-1 items-center gap-16 lg:grid-cols-2">
-          {/* Left Card */}
-          <section className="flex justify-center lg:justify-start">
-            <div className="auth-panel auth-delay-1 surface-card flex w-full max-w-[520px] min-h-[560px] flex-col rounded-3xl px-10 py-14 md:px-12">
-              <h1 className="text-center text-4xl font-semibold text-zinc-900">
-                Set new password
-              </h1>
+    <div className="min-h-screen overflow-y-auto bg-white text-zinc-900 flex items-center">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-12 px-6 py-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center lg:gap-16 lg:py-6 xl:gap-24">
+        <div className="auth-form-enter relative z-20 w-full max-w-md lg:flex lg:min-h-[580px] lg:flex-col lg:justify-start lg:pt-12">
+          <div className="mb-7 mt-1.5 flex h-16 items-center justify-center">
+            <h1 className="text-center text-4xl font-bold text-zinc-900">Set New Password</h1>
+          </div>
 
-              <div className="mt-5 text-center text-sm text-zinc-400">
-                Enter your new password below.
-              </div>
+          <div className="space-y-5">
+            <p className="text-center text-sm leading-6 text-zinc-500">
+              Enter your new password below so you can get back into your account safely.
+            </p>
 
-              <div className="auth-form-stack mt-10 space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-zinc-600">New password</p>
-                  <input
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="New password"
-                    type="password"
-                    className="h-12 w-full rounded-full border border-zinc-200 bg-white px-5 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
-                  />
-                </div>
+            <Input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="New password"
+              type={showPassword ? "text" : "password"}
+              rightIcon={showPassword ? <EyeIcon /> : <EyeOffIcon />}
+              onRightIconClick={() => setShowPassword((value) => !value)}
+              rightIconLabel={showPassword ? "Hide password" : "Show password"}
+            />
 
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-zinc-600">
-                    Confirm password
-                  </p>
-                  <input
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    placeholder="Confirm password"
-                    type="password"
-                    className="h-12 w-full rounded-full border border-zinc-200 bg-white px-5 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
-                  />
-                </div>
+            <Input
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="Confirm password"
+              type={showConfirm ? "text" : "password"}
+              rightIcon={showConfirm ? <EyeIcon /> : <EyeOffIcon />}
+              onRightIconClick={() => setShowConfirm((value) => !value)}
+              rightIconLabel={showConfirm ? "Hide confirm password" : "Show confirm password"}
+            />
 
-                <button
-                  type="button"
-                  onClick={handleUpdatePassword}
-                  disabled={loading || !ready}
-                  className="mt-3 h-11 w-full rounded-full bg-zinc-900 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loading ? "Updating..." : "Update password"}
-                </button>
+            <Button
+              type="button"
+              onClick={handleUpdatePassword}
+              disabled={loading || !ready}
+              className="bg-[#5f97ee] hover:bg-[#4f87de] active:bg-[#3f76cd]"
+            >
+              {loading ? "Updating..." : "Update password"}
+            </Button>
 
-                {message && (
-                  <p
-                    className={`mt-3 text-center text-sm ${
-                      message.toLowerCase().includes("success")
-                        ? "text-emerald-600"
-                        : "text-red-500"
-                    }`}
-                  >
-                    {message}
-                  </p>
-                )}
+            {message && (
+              <p
+                className={`text-center text-sm ${
+                  message.toLowerCase().includes("success") ? "text-emerald-600" : "text-red-500"
+                }`}
+              >
+                {message}
+              </p>
+            )}
 
-                <div className="mt-8 flex items-center justify-center gap-2 text-xs text-zinc-400">
-                  <span>Back to</span>
-                  <Link
-                    href={AUTH_ROUTES.login}
-                    className="font-semibold underline underline-offset-2 hover:text-zinc-600"
-                  >
-                    Log in
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Right Illustration */}
-          <AuthStudentIllustration alt="Student finishing a password reset" />
+            <p className="text-center text-xs text-zinc-500">
+              Back to{" "}
+              <Link
+                href={AUTH_ROUTES.login}
+                className="font-semibold text-zinc-900 underline underline-offset-2"
+              >
+                Log in
+              </Link>
+            </p>
+          </div>
         </div>
-      </main>
+
+        <div className="auth-visual-enter">
+          <AuthStudentIllustration
+            imageSrc="/User_Image/Display.png"
+            alt="Library display while setting a new password"
+          />
+        </div>
+      </div>
     </div>
   );
 }

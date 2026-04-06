@@ -1,11 +1,14 @@
-import ReaderPlaceholderPage from "@/components/main/ReaderPlaceholderPage";
+import ReaderAccountShell from "@/components/main/account/ReaderAccountShell";
+import ProfileSection from "@/components/main/account/ProfileSection";
 
 export default function ProfilePage() {
   return (
-    <ReaderPlaceholderPage
-      eyebrow="Profile"
-      title="Manage your account and reader identity."
-      description="Use this page for profile details, reader preferences, saved addresses, and anything related to the personal account experience."
-    />
+    <ReaderAccountShell
+      activeSection="profile"
+      eyebrow="Account"
+      title="Profile"
+    >
+      <ProfileSection />
+    </ReaderAccountShell>
   );
 }

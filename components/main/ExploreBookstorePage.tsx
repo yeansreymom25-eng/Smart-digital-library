@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
 type Book = {
@@ -186,21 +187,26 @@ const topBookIds = [
 function BookCover({
   book,
   compact = false,
+  widthClass,
 }: {
   book: Book;
   compact?: boolean;
+  widthClass?: string;
 }) {
-  const sizeClass = compact
+  const sizeClass = widthClass
+    ? widthClass
+    : compact
     ? "w-[3.8rem] rounded-[0.32rem]"
-    : "w-[8.7rem] rounded-[0.45rem] sm:w-[9.1rem]";
+    : "w-[10rem] rounded-[0.45rem] sm:w-[10.8rem] lg:w-[11.2rem]";
   const titleClass = compact
     ? "text-[0.62rem] leading-[0.9] tracking-[-0.03em]"
-    : "text-[1rem] leading-[0.92] tracking-[-0.045em]";
-  const authorClass = compact ? "text-[0.42rem]" : "text-[0.56rem]";
+    : "text-[1.08rem] leading-[0.92] tracking-[-0.045em]";
+  const authorClass = compact ? "text-[0.42rem]" : "text-[0.6rem]";
 
   return (
-    <div
-      className={`relative aspect-[2/3] overflow-hidden border border-black/5 shadow-[0_16px_32px_rgba(15,23,42,0.12)] ${sizeClass}`}
+    <Link
+      href={`/book/${book.id}/read`}
+      className={`relative block aspect-[2/3] overflow-hidden border border-black/5 shadow-[0_16px_32px_rgba(15,23,42,0.12)] ${sizeClass}`}
     >
       {book.imageSrc ? (
         <Image
@@ -221,7 +227,7 @@ function BookCover({
           </div>
         </div>
       )}
-    </div>
+    </Link>
   );
 }
 
@@ -313,13 +319,23 @@ function BookRow({
   title: string;
   booksToShow: Book[];
 }) {
+  const cleanedTitle = title.replace(/\s*>$/, "");
+
   return (
     <section
       id={id}
       className="relative left-1/2 w-screen -translate-x-1/2 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(255,255,255,0.96)_52%,rgba(15,23,42,0.075)_100%)] shadow-[0_18px_34px_rgba(15,23,42,0.06)]"
     >
       <div className="mx-auto flex w-full flex-col gap-6 px-4 py-7 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
-        <h2 className="text-[1.45rem] font-semibold tracking-[-0.04em] text-[#22262f]">{title}</h2>
+        <h2 className="flex items-center gap-2 text-[1.8rem] font-semibold tracking-[-0.05em] text-[#22262f]">
+          <span>{cleanedTitle}</span>
+          <span
+            aria-hidden="true"
+            className="text-[1.9rem] font-medium leading-none text-[#aeb8c8]"
+          >
+            ›
+          </span>
+        </h2>
 
         <div className="hide-scrollbar flex snap-x gap-8 overflow-x-auto pb-3 pr-6">
           {booksToShow.map((book) => (
@@ -340,7 +356,15 @@ function TopBooksRow({ booksToShow }: { booksToShow: Book[] }) {
       className="relative left-1/2 w-screen -translate-x-1/2 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(249,250,252,0.97)_56%,rgba(15,23,42,0.07)_100%)] text-[#1f2430] shadow-[0_18px_34px_rgba(15,23,42,0.08)]"
     >
       <div className="mx-auto flex w-full flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
-        <h2 className="text-[1.75rem] font-semibold tracking-[-0.04em] text-[#22262f]">Top Books</h2>
+        <h2 className="flex items-center gap-2 text-[1.95rem] font-semibold tracking-[-0.05em] text-[#22262f]">
+          <span>Top Books</span>
+          <span
+            aria-hidden="true"
+            className="text-[2rem] font-medium leading-none text-[#aeb8c8]"
+          >
+            ›
+          </span>
+        </h2>
 
         <div className="grid gap-6 md:grid-cols-3 xl:grid-cols-5">
           {booksToShow.map((book, index) => (
@@ -430,7 +454,7 @@ export default function ExploreBookstorePage() {
                 onClick={() => setActiveAdIndex(index)}
                 aria-label={`Show ad ${index + 1}`}
                 className={`h-2.5 rounded-full transition-all duration-300 ${
-                  index === activeAdIndex ? "w-7 bg-[#5a8fe9]" : "w-2.5 bg-[#cfd9ea]"
+                  index === activeAdIndex ? "w-7 bg-[#151922]" : "w-2.5 bg-[#1f2430]/28"
                 }`}
               />
             ))}

@@ -1,11 +1,14 @@
-import ReaderPlaceholderPage from "@/components/main/ReaderPlaceholderPage";
+import ReaderAccountShell from "@/components/main/account/ReaderAccountShell";
+import TransactionsSection from "@/components/main/account/TransactionsSection";
 
 export default function TransactionsPage() {
   return (
-    <ReaderPlaceholderPage
-      eyebrow="Transaction"
-      title="Track every purchase, membership, and checkout."
-      description="This page is ready for receipts, subscription activity, book purchases, and payment history with the same account flow from the profile menu."
-    />
+    <ReaderAccountShell
+      activeSection="transactions"
+      eyebrow="Account"
+      title="Transaction"
+    >
+      <TransactionsSection />
+    </ReaderAccountShell>
   );
 }
