@@ -3,6 +3,18 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { getCategoryStats, type AdminCategory, type CategoryLibraryType } from "@/src/lib/adminCategories";
+import { getSupabaseBrowserSSR } from "@/src/lib/supabaseBrowserSSR";
+
+const DEFAULT_ENGLISH_CATEGORIES = [
+  "Self-Help", "Fantasy", "Historical", "Sci-Fi", "Classics",
+  "Science", "Finance", "Mystery", "Philosophy", "Biography",
+  "Romance", "Travel", "Drama", "Cooking", "Horror",
+];
+
+const DEFAULT_KHMER_CATEGORIES = [
+  "អក្សរសិល្ប៍", "ប្រវត្តិសាស្ត្រ", "វិទ្យាសាស្ត្រ", "ទស្សនវិជ្ជា",
+  "សេដ្ឋកិច្ច", "សុខភាព", "អប់រំ", "សាសនា",
+];
 
 function PencilIcon() {
   return (
@@ -32,6 +44,45 @@ export default function CategoriesManager({ initialCategories = [] }: { initialC
   const [selectedType, setSelectedType] = useState<CategoryLibraryType>("english");
   const [pendingDelete, setPendingDelete] = useState<AdminCategory | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedMsg, setSeedMsg] = useState("");
+
+  async function handleSeedDefaults() {
+    setIsSeeding(true);
+    setSeedMsg("");
+    try {
+      const supabase = getSupabaseBrowserSSR();
+      if (!supabase) throw new Error("Connection error");
+
+      const defaults = selectedType === "english" ? DEFAULT_ENGLISH_CATEGORIES : DEFAULT_KHMER_CATEGORIES;
+      const existingNames = new Set(categories.filter(c => c.libraryType === selectedType).map(c => c.name.toLowerCase()));
+      const toInsert = defaults.filter(n => !existingNames.has(n.toLowerCase()));
+
+      if (toInsert.length === 0) { setSeedMsg("All default categories already exist!"); setIsSeeding(false); return; }
+
+      const { data, error } = await supabase.from("categories").insert(
+        toInsert.map(name => ({ name, library_type: selectedType, description: "" }))
+      ).select();
+
+      if (error) throw new Error(error.message);
+
+      const newCats: AdminCategory[] = (data ?? []).map((row) => ({
+        id: row.id as string,
+        name: row.name as string,
+        description: "",
+        books: 0,
+        libraryType: selectedType,
+      }));
+
+      setCategories(prev => [...prev, ...newCats]);
+      setSeedMsg(`✅ Added ${newCats.length} default categories!`);
+      setTimeout(() => setSeedMsg(""), 3000);
+    } catch (err) {
+      setSeedMsg(err instanceof Error ? err.message : "Failed to seed categories.");
+    } finally {
+      setIsSeeding(false);
+    }
+  }
 
   const filteredCategories = useMemo(
     () => categories.filter((c) => c.libraryType === selectedType),
@@ -83,6 +134,15 @@ export default function CategoriesManager({ initialCategories = [] }: { initialC
             </button>
           </div>
 
+          <button
+              type="button"
+              onClick={() => void handleSeedDefaults()}
+              disabled={isSeeding}
+              className="rounded-[10px] border border-[#4d98f0] bg-white px-6 py-3 text-base font-semibold text-[#4d98f0] transition hover:bg-[#eef5ff] disabled:opacity-50"
+            >
+              {isSeeding ? "Adding…" : "⚡ Add Default Categories"}
+            </button>
+
           <Link
             href="/library-owner/categories/new"
             className="rounded-[10px] bg-[#4d98f0] px-6 py-3 text-base font-semibold text-white shadow-[0_10px_20px_rgba(77,152,240,0.18)] transition hover:bg-[#3789ea]"
@@ -91,6 +151,12 @@ export default function CategoriesManager({ initialCategories = [] }: { initialC
           </Link>
         </div>
       </div>
+
+      {seedMsg && (
+        <div className={`rounded-[10px] border px-4 py-3 text-sm font-medium ${seedMsg.startsWith("✅") ? "border-[#d8f0d1] bg-[#f6fff3] text-[#3d7f2f]" : "border-[#fecaca] bg-[#fff5f5] text-[#991b1b]"}`}>
+          {seedMsg}
+        </div>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {filteredCategories.map((category) => (
