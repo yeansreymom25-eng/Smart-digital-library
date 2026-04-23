@@ -19,11 +19,6 @@ function PasswordSection() {
       setStatus("error");
       return;
     }
-    if (newPassword.length < 6) {
-      setErrorMsg("Password must be at least 6 characters.");
-      setStatus("error");
-      return;
-    }
 
     setStatus("loading");
     setErrorMsg("");
@@ -32,17 +27,6 @@ function PasswordSection() {
       const supabase = getSupabaseBrowserSSR();
       if (!supabase) throw new Error("Connection error");
 
-      // Re-authenticate with current password first
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) throw new Error("Not authenticated");
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword,
-      });
-      if (signInError) throw new Error("Current password is incorrect.");
-
-      // Update to new password
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
       if (updateError) throw new Error(updateError.message);
 
@@ -82,13 +66,6 @@ function PasswordSection() {
             <>
               <input
                 type="password"
-                placeholder="Current password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full rounded-[1rem] border border-[#ebeff5] bg-white px-4 py-3 text-sm text-[#253041] outline-none placeholder:text-[#b3bcc9] focus:border-[#c5cfde]"
-              />
-              <input
-                type="password"
                 placeholder="New password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -117,7 +94,7 @@ function PasswordSection() {
                 <button
                   type="button"
                   onClick={() => void handleChangePassword()}
-                  disabled={status === "loading" || !currentPassword || !newPassword || !confirmPassword}
+                  disabled={status === "loading" || !newPassword || !confirmPassword}
                   className="rounded-full bg-[#202532] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(32,37,50,0.16)] transition hover:bg-[#2e3645] disabled:opacity-50"
                 >
                   {status === "loading" ? "Saving…" : "Save password"}
