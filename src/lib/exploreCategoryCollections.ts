@@ -5,6 +5,7 @@ export type ExploreOption = "english" | "khmer";
 export type ExploreCategoryCollection = {
   id: string;
   title: string;
+  englishTitle: string; // used for DB queries - always the English name
   subtitle: string;
   color: string;
   heroBookId: string;
@@ -35,6 +36,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "self-help",
     title: "Self-Help",
+    englishTitle: "Self-Help",
     subtitle: "Popular self-growth and practical books for readers who want to improve day by day.",
     color: "from-[#6e8465] to-[#49604a]",
     heroBookId: "atomic-habits",
@@ -45,6 +47,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "fantasy",
     title: "Fantasy",
+    englishTitle: "Fantasy",
     subtitle: "Magical worlds, adventure, mystery, and beautiful escapist fiction.",
     color: "from-[#d85f58] to-[#9f3e3a]",
     heroBookId: "castle-in-the-moon",
@@ -55,6 +58,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "historical",
     title: "Historical",
+    englishTitle: "Historical",
     subtitle: "Stories with rich atmosphere, memory, and time-shaped settings.",
     color: "from-[#5faa39] to-[#467d28]",
     heroBookId: "castle-in-the-mist",
@@ -65,6 +69,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "sci-fi",
     title: "Sci-Fi",
+    englishTitle: "Sci-Fi",
     subtitle: "Futuristic, imaginative, and emotionally immersive speculative reads.",
     color: "from-[#1d2bca] to-[#10196f]",
     heroBookId: "life-impossible",
@@ -75,6 +80,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "classics",
     title: "Classics",
+    englishTitle: "Classics",
     subtitle: "Recognizable titles and timeless stories that still feel fresh.",
     color: "from-[#cb7a73] to-[#954f4a]",
     heroBookId: "lessons-in-chemistry",
@@ -85,6 +91,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "science",
     title: "Science",
+    englishTitle: "Science",
     subtitle: "Books for curious minds who enjoy ideas, knowledge, and discovery.",
     color: "from-[#db5bc8] to-[#983992]",
     heroBookId: "all-the-single-ladies",
@@ -95,6 +102,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "finance",
     title: "Finance",
+    englishTitle: "Finance",
     subtitle: "Smart money and practical thinking for readers who want useful insight.",
     color: "from-[#d5ad56] to-[#9a7331]",
     heroBookId: "atomic-habits",
@@ -105,6 +113,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "mystery",
     title: "Mystery",
+    englishTitle: "Mystery",
     subtitle: "Suspenseful, twisty books that keep readers curious until the end.",
     color: "from-[#6954f0] to-[#4532aa]",
     heroBookId: "listen-for-the-lie",
@@ -115,6 +124,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "philosophy",
     title: "Philosophy",
+    englishTitle: "Philosophy",
     subtitle: "Reflective, idea-driven reads for slow thoughtful reading.",
     color: "from-[#cb3b2e] to-[#8d1f18]",
     heroBookId: "are-you-my-mother",
@@ -125,6 +135,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "biography",
     title: "Biography",
+    englishTitle: "Biography",
     subtitle: "Personal stories, life journeys, and books with a human center.",
     color: "from-[#b2be4d] to-[#76812e]",
     heroBookId: "all-the-single-ladies",
@@ -135,6 +146,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "romance",
     title: "Romance",
+    englishTitle: "Romance",
     subtitle: "Warm, emotional, and relationship-driven books for comfort reading.",
     color: "from-[#d9d9db] to-[#aeb3b9]",
     heroBookId: "it-ends-with-us",
@@ -145,6 +157,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "travel",
     title: "Travel",
+    englishTitle: "Travel",
     subtitle: "Place-based books and destination-inspired reading for wanderers.",
     color: "from-[#402420] to-[#241311]",
     heroBookId: "germany-travel-book",
@@ -155,6 +168,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "drama",
     title: "Drama",
+    englishTitle: "Drama",
     subtitle: "Emotion-rich stories with tension, relationships, and strong character arcs.",
     color: "from-[#5dcf69] to-[#359048]",
     heroBookId: "favorites",
@@ -165,6 +179,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "cooking",
     title: "Cooking",
+    englishTitle: "Cooking",
     subtitle: "Practical and casual cooking books for readers who want something useful.",
     color: "from-[#6cf0ca] to-[#3cb98e]",
     heroBookId: "hate-to-cook-book",
@@ -175,6 +190,7 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "horror",
     title: "Horror",
+    englishTitle: "Horror",
     subtitle: "Dark, eerie, and atmospheric reads with a stronger edge.",
     color: "from-[#334e73] to-[#223754]",
     heroBookId: "wild-dark-shore",
@@ -188,6 +204,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "self-help",
     title: "ជំនួយខ្លួនឯង",
+    englishTitle: "Self-Help",
     subtitle: "សៀវភៅខ្មែរដែលជួយអភិវឌ្ឍខ្លួនឯង និងជីវិតប្រចាំថ្ងៃ។",
     color: "from-[#6e8465] to-[#49604a]",
     heroBookId: "khmer-1",
@@ -198,6 +215,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "fantasy",
     title: "រឿងអស្ចារ្យ",
+    englishTitle: "Fantasy",
     subtitle: "ពិភពមន្តអាគម និងការ冒险នៅក្នុងអក្សរសិល្ប៍ខ្មែរ។",
     color: "from-[#d85f58] to-[#9f3e3a]",
     heroBookId: "khmer-2",
@@ -208,6 +226,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "historical",
     title: "ប្រវត្តិសាស្ត្រ",
+    englishTitle: "Historical",
     subtitle: "សៀវភៅខ្មែរដែលពិពណ៌នាអំពីប្រវត្តិ និងវប្បធម៌។",
     color: "from-[#5faa39] to-[#467d28]",
     heroBookId: "khmer-3",
@@ -218,6 +237,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "sci-fi",
     title: "វិទ្យាសាស្ត្រប្រឌិត",
+    englishTitle: "Sci-Fi",
     subtitle: "រឿងប្រឌិតផ្អែកលើវិទ្យាសាស្ត្រ និងបច្ចេកវិទ្យា។",
     color: "from-[#1d2bca] to-[#10196f]",
     heroBookId: "khmer-4",
@@ -228,6 +248,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "classics",
     title: "អក្សរសិល្ប៍ក្លាស្សិក",
+    englishTitle: "Classics",
     subtitle: "សៀវភៅខ្មែរបុរាណដ៏ល្បីល្បាញ។",
     color: "from-[#cb7a73] to-[#954f4a]",
     heroBookId: "khmer-5",
@@ -238,6 +259,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "science",
     title: "វិទ្យាសាស្ត្រ",
+    englishTitle: "Science",
     subtitle: "សៀវភៅចំណេះដឹងវិទ្យាសាស្ត្រ សម្រាប់អ្នកចូលចិត្តស្រាវជ្រាវ។",
     color: "from-[#db5bc8] to-[#983992]",
     heroBookId: "khmer-6",
@@ -248,6 +270,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "finance",
     title: "ហិរញ្ញវត្ថុ",
+    englishTitle: "Finance",
     subtitle: "ចំណេះដឹងហិរញ្ញវត្ថុ និងការគ្រប់គ្រងប្រាក់កាស។",
     color: "from-[#d5ad56] to-[#9a7331]",
     heroBookId: "khmer-1",
@@ -258,6 +281,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "mystery",
     title: "អាថ៌កំបាំង",
+    englishTitle: "Mystery",
     subtitle: "រឿងដ៏គួរឱ្យចង់ដឹង និងអាថ៌កំបាំងសម្រាប់អ្នកអាន។",
     color: "from-[#6954f0] to-[#4532aa]",
     heroBookId: "khmer-2",
@@ -268,6 +292,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "philosophy",
     title: "ទស្សនវិជ្ជា",
+    englishTitle: "Philosophy",
     subtitle: "ការគិតស៊ីជម្រៅ និងទស្សនវិជ្ជាខ្មែរ។",
     color: "from-[#cb3b2e] to-[#8d1f18]",
     heroBookId: "khmer-3",
@@ -278,6 +303,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "biography",
     title: "ជីវប្រវត្តិ",
+    englishTitle: "Biography",
     subtitle: "រឿងជីវិតពិត និងបទពិសោធន៍របស់មនុស្សល្បី។",
     color: "from-[#b2be4d] to-[#76812e]",
     heroBookId: "khmer-4",
@@ -288,6 +314,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "romance",
     title: "រឿងស្នេហា",
+    englishTitle: "Romance",
     subtitle: "រឿងស្នេហាខ្មែរ ដ៏ពណ៌ស្រស់ និងទន់ភ្លន់។",
     color: "from-[#d9d9db] to-[#aeb3b9]",
     heroBookId: "khmer-5",
@@ -298,6 +325,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "travel",
     title: "ទេសចរណ៍",
+    englishTitle: "Travel",
     subtitle: "ការរៀបរាប់អំពីដំណើរទេសចរណ៍ និងកន្លែងគួរចូលទស្សនា។",
     color: "from-[#402420] to-[#241311]",
     heroBookId: "khmer-6",
@@ -308,6 +336,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "drama",
     title: "រឿងនាដកម្ម",
+    englishTitle: "Drama",
     subtitle: "រឿងដ៏អារម្មណ៍ណ៍ ពោរពេញដោយបទពិសោធន៍ជីវិត។",
     color: "from-[#5dcf69] to-[#359048]",
     heroBookId: "khmer-1",
@@ -318,6 +347,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "cooking",
     title: "ធ្វើម្ហូប",
+    englishTitle: "Cooking",
     subtitle: "ម្ហូបខ្មែរ និងការណែនាំធ្វើម្ហូបប្រចាំថ្ងៃ។",
     color: "from-[#6cf0ca] to-[#3cb98e]",
     heroBookId: "khmer-2",
@@ -328,6 +358,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   {
     id: "horror",
     title: "រឿងភ័យខ្លាច",
+    englishTitle: "Horror",
     subtitle: "រឿងដ៏គួរឱ្យភ័យខ្លាច និងមានបរិយាកាសងងឹត។",
     color: "from-[#334e73] to-[#223754]",
     heroBookId: "khmer-3",

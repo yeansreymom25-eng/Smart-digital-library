@@ -29,7 +29,7 @@ export default async function ExploreCategoryPage({
     .from("books")
     .select("*")
     .eq("status", "Published")
-    .ilike("category", category.title)
+    .ilike("category", category.englishTitle)
     .order("created_at", { ascending: false });
 
   const dbBooks: ReaderBookDetail[] = (data ?? []).map((row) => {
