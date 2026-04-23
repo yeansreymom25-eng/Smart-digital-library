@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CategoryLibraryType, AdminCategory } from "@/src/lib/adminCategories";
 import type { AdminBook } from "@/src/lib/adminBooks";
+import { getSupabaseBrowserSSR } from "@/src/lib/supabaseBrowserSSR";
 
 type BookRecordFormProps = {
   mode: "create" | "edit";
@@ -131,6 +132,10 @@ export default function BookRecordForm({
   const [author, setAuthor] = useState(initialBook?.author ?? "");
   const [category, setCategory] = useState(initialBook?.category ?? "");
   const [libraryType, setLibraryType] = useState<CategoryLibraryType>(initialBook?.libraryType ?? "english");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [categoryCreating, setCategoryCreating] = useState(false);
+  const [categoryError, setCategoryError] = useState("");
   const [accessType, setAccessType] = useState(initialBook?.type ?? "Buy/Rent");
   const [status, setStatus] = useState<AdminBook["status"]>(initialBook?.status ?? "Published");
   const [price, setPrice] = useState(initialBook?.price ?? "");
@@ -142,14 +147,48 @@ export default function BookRecordForm({
 
   const requiresPaymentQr = accessType !== "Free";
 
+  const [allCategories, setAllCategories] = useState<AdminCategory[]>(initialCategories);
+
   const availableCategories = useMemo(
-    () => initialCategories.filter((item) => item.libraryType === libraryType),
-    [initialCategories, libraryType]
+    () => allCategories.filter((item) => item.libraryType === libraryType),
+    [allCategories, libraryType]
   );
 
   useEffect(() => {
     if (mode === "create") setCategory("");
   }, [libraryType, mode]);
+
+  async function handleCreateCategory() {
+    if (!newCategoryName.trim()) { setCategoryError("Category name cannot be empty."); return; }
+    setCategoryCreating(true);
+    setCategoryError("");
+    try {
+      const supabase = getSupabaseBrowserSSR();
+      if (!supabase) throw new Error("Connection error");
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.from("categories").insert({
+        name: newCategoryName.trim(),
+        library_type: libraryType,
+        owner_id: user?.id ?? null,
+      }).select().single();
+      if (error) throw new Error(error.message);
+      const newCat: AdminCategory = {
+        id: data.id as string,
+        name: data.name as string,
+        description: "",
+        books: 0,
+        libraryType: libraryType,
+      };
+      setAllCategories((prev) => [...prev, newCat]);
+      setCategory(newCat.name);
+      setNewCategoryName("");
+      setIsCreatingCategory(false);
+    } catch (err) {
+      setCategoryError(err instanceof Error ? err.message : "Failed to create category.");
+    } finally {
+      setCategoryCreating(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -245,13 +284,39 @@ export default function BookRecordForm({
 
         <label className="block">
           <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.18em] text-[#1f4a8a]">Category</span>
-          <select value={category} onChange={(e) => setCategory(e.target.value)}
-            className="w-full rounded-xl border border-[#c8dcff] bg-white px-5 py-4 text-base text-[#1e3a6d] outline-none">
-            <option value="">Select a category</option>
-            {availableCategories.map((item) => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
+          {!isCreatingCategory ? (
+            <div className="flex gap-2">
+              <select value={category} onChange={(e) => setCategory(e.target.value)}
+                className="flex-1 rounded-xl border border-[#c8dcff] bg-white px-5 py-4 text-base text-[#1e3a6d] outline-none">
+                <option value="">Select a category</option>
+                {availableCategories.map((item) => (
+                  <option key={item.id} value={item.name}>{item.name}</option>
+                ))}
+              </select>
+              <button type="button" onClick={() => { setIsCreatingCategory(true); setCategoryError(""); }}
+                className="rounded-xl border border-[#c8dcff] bg-[#eef5ff] px-4 py-2 text-sm font-semibold text-[#2456b6] transition hover:bg-[#dce9ff]">
+                + New
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-[#c8dcff] bg-[#f5f9ff] p-4">
+              <p className="mb-2 text-sm font-semibold text-[#1f4a8a]">Create new category</p>
+              <input type="text" placeholder="Category name" value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="w-full rounded-lg border border-[#c8dcff] bg-white px-4 py-3 text-sm text-[#1e3a6d] outline-none placeholder:text-[#94afd6]" />
+              {categoryError && <p className="mt-2 text-xs text-red-500">{categoryError}</p>}
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={() => void handleCreateCategory()} disabled={categoryCreating}
+                  className="rounded-lg bg-[#2456b6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4a9e] disabled:opacity-50">
+                  {categoryCreating ? "Creating…" : "Create & Select"}
+                </button>
+                <button type="button" onClick={() => { setIsCreatingCategory(false); setCategoryError(""); setNewCategoryName(""); }}
+                  className="rounded-lg border border-[#c8dcff] bg-white px-4 py-2 text-sm font-semibold text-[#596476] transition hover:bg-[#f0f4f8]">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </label>
 
         <label className="block">
