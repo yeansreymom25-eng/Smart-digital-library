@@ -89,8 +89,7 @@ function isReaderRoute(pathname: string): boolean {
     pathname.startsWith("/book") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/settings") ||
-    pathname.startsWith("/transactions") ||
-    pathname.startsWith("/discount")
+    pathname.startsWith("/transactions")
   );
 }
 

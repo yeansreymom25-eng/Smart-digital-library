@@ -11,7 +11,6 @@ const primaryLinks = [
   { href: "/home", label: "Home" },
   { href: "/explore", label: "Explore" },
   { href: "/my-library", label: "My Library" },
-  { href: "/discount", label: "Discount" },
 ];
 
 function SearchIcon() {
