@@ -3,6 +3,133 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReaderProfileData } from "@/src/lib/readerAccountStorage";
+import { getSupabaseBrowserSSR } from "@/src/lib/supabaseBrowserSSR";
+
+function PasswordSection() {
+  const [open, setOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleChangePassword() {
+    if (newPassword !== confirmPassword) {
+      setErrorMsg("New passwords do not match.");
+      setStatus("error");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setErrorMsg("Password must be at least 6 characters.");
+      setStatus("error");
+      return;
+    }
+
+    setStatus("loading");
+    setErrorMsg("");
+
+    try {
+      const supabase = getSupabaseBrowserSSR();
+      if (!supabase) throw new Error("Connection error");
+
+      // Re-authenticate with current password first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error("Not authenticated");
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (signInError) throw new Error("Current password is incorrect.");
+
+      // Update to new password
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) throw new Error(updateError.message);
+
+      setStatus("success");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => { setOpen(false); setStatus("idle"); }, 2000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="rounded-[1.4rem] border border-[#ebeff5] bg-white/90 px-4 py-4 shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:col-span-2">
+      <div className="text-[0.78rem] font-semibold uppercase tracking-[0.16em] text-[#97a0af]">Password</div>
+
+      {!open ? (
+        <div className="mt-2 flex items-center justify-between">
+          <div className="text-[1rem] font-medium text-[#253041]">••••••••</div>
+          <button
+            type="button"
+            onClick={() => { setOpen(true); setStatus("idle"); setErrorMsg(""); }}
+            className="rounded-full border border-[#dbe2ec] bg-white px-4 py-2 text-sm font-semibold text-[#596476] transition hover:bg-[#fbfcff]"
+          >
+            Change password
+          </button>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-3">
+          {status === "success" ? (
+            <div className="rounded-[1rem] border border-[#d8f0d1] bg-[#f6fff3] px-4 py-3 text-sm font-medium text-[#3d7f2f]">
+              ✅ Password changed successfully!
+            </div>
+          ) : (
+            <>
+              <input
+                type="password"
+                placeholder="Current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full rounded-[1rem] border border-[#ebeff5] bg-white px-4 py-3 text-sm text-[#253041] outline-none placeholder:text-[#b3bcc9] focus:border-[#c5cfde]"
+              />
+              <input
+                type="password"
+                placeholder="New password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full rounded-[1rem] border border-[#ebeff5] bg-white px-4 py-3 text-sm text-[#253041] outline-none placeholder:text-[#b3bcc9] focus:border-[#c5cfde]"
+              />
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full rounded-[1rem] border border-[#ebeff5] bg-white px-4 py-3 text-sm text-[#253041] outline-none placeholder:text-[#b3bcc9] focus:border-[#c5cfde]"
+              />
+              {status === "error" && (
+                <div className="rounded-[1rem] border border-[#fecaca] bg-[#fff5f5] px-4 py-3 text-sm text-[#991b1b]">
+                  {errorMsg}
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); setStatus("idle"); setErrorMsg(""); }}
+                  className="rounded-full border border-[#dbe2ec] bg-white px-5 py-2.5 text-sm font-semibold text-[#596476] transition hover:bg-[#fbfcff]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleChangePassword()}
+                  disabled={status === "loading" || !currentPassword || !newPassword || !confirmPassword}
+                  className="rounded-full bg-[#202532] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(32,37,50,0.16)] transition hover:bg-[#2e3645] disabled:opacity-50"
+                >
+                  {status === "loading" ? "Saving…" : "Save password"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
@@ -183,15 +310,7 @@ export default function ProfileSection({ initialProfile, userId }: { initialProf
               <ProfileRow label="Gender" value={profile.gender} />
               <ProfileRow label="Date of birth" value={profile.dateOfBirth} />
               <ProfileRow label="Country / location" value={profile.country} />
-              <div className="rounded-[1.4rem] border border-[#ebeff5] bg-white/90 px-4 py-4 shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:col-span-2">
-                <div className="text-[0.78rem] font-semibold uppercase tracking-[0.16em] text-[#97a0af]">Password</div>
-                <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-[1rem] font-medium text-[#253041]">{profile.passwordLabel}</div>
-                  <button type="button" className="rounded-full border border-[#dbe2ec] bg-white px-4 py-2 text-sm font-semibold text-[#596476] transition hover:bg-[#fbfcff]">
-                    Change password
-                  </button>
-                </div>
-              </div>
+              <PasswordSection />
               <div className="rounded-[1.4rem] border border-[#ebeff5] bg-white/90 px-4 py-4 shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:col-span-2">
                 <div className="text-[0.78rem] font-semibold uppercase tracking-[0.16em] text-[#97a0af]">Reading preference / bio</div>
                 <p className="mt-2 text-[1rem] leading-7 text-[#677282]">{profile.bio || "No reading preference added yet."}</p>
