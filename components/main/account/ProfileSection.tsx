@@ -88,6 +88,9 @@ export default function ProfileSection({ initialProfile, userId }: { initialProf
       setProfile(draft);
       setEditing(false);
       router.refresh();
+    } catch {
+      setProfile(draft);
+      setEditing(false);
     }
   }
 
