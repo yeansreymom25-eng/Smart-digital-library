@@ -71,23 +71,28 @@ export default function ReaderMainNavigation() {
       const supabase = getSupabaseBrowserClient();
       if (!supabase) return;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) return;
 
+      // Set email immediately from auth
       setUserEmail(user.email ?? "");
 
+      // Set name from metadata as quick fallback
+      if (user.user_metadata?.full_name) {
+        setUserFullName(user.user_metadata.full_name as string);
+      } else if (user.user_metadata?.name) {
+        setUserFullName(user.user_metadata.name as string);
+      }
+
+      // Then fetch profile for full_name and avatar
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (profile) {
-        if (profile.full_name) setUserFullName(profile.full_name as string);
-        if (profile.avatar_url) setUserAvatar(profile.avatar_url as string);
-      } else if (user.user_metadata?.full_name) {
-        setUserFullName(user.user_metadata.full_name as string);
-      }
+      if (profile?.full_name) setUserFullName(profile.full_name as string);
+      if (profile?.avatar_url) setUserAvatar(profile.avatar_url as string);
     }
 
     void loadUser();
