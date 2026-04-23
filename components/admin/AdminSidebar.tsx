@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminNavigation } from "@/src/lib/adminNavigation";
+import { useLogout } from "@/src/hooks/useLogout";
 
 function NavIcon({ title }: { title: string }) {
   const common = "h-5 w-5";
@@ -81,8 +82,10 @@ function NavIcon({ title }: { title: string }) {
   }
 }
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ plan = "No Plan" }: { plan?: string }) {
   const pathname = usePathname();
+  const { logout, isLoading } = useLogout();
+
   const navItems = adminNavigation.filter(
     (item) => item.title !== "Overview" && item.title !== "Subscription"
   );
@@ -101,7 +104,7 @@ export default function AdminSidebar() {
             <h2 className="text-[1.45rem] font-bold leading-none text-slate-950">
               Library Owner
             </h2>
-            <p className="mt-1 text-base text-slate-500">Premium Plan</p>
+            <p className="mt-1 text-base text-slate-500">{plan}</p>
           </div>
         </div>
       </div>
@@ -109,7 +112,6 @@ export default function AdminSidebar() {
       <nav className="flex-1 space-y-2 px-4 py-4">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
-
           return (
             <Link
               key={item.href}
@@ -150,13 +152,15 @@ export default function AdminSidebar() {
       <div className="border-t border-[#d9d9d9] px-5 py-5">
         <button
           type="button"
-          className="flex items-center gap-3 text-lg font-medium text-[#ff3b30] transition hover:opacity-80"
+          onClick={() => void logout()}
+          disabled={isLoading}
+          className="flex items-center gap-3 text-lg font-medium text-[#ff3b30] transition hover:opacity-80 disabled:opacity-50"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
             <path d="M14 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-3" />
             <path d="M10 12h10M17 7l5 5-5 5" />
           </svg>
-          Logout
+          {isLoading ? "Logging out…" : "Logout"}
         </button>
       </div>
     </aside>

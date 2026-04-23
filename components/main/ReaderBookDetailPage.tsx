@@ -1,19 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { ReaderBookDetail } from "@/src/lib/readerBookDetails";
-import { appendReaderTransaction } from "@/src/lib/readerAccountStorage";
+import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
 
 type PurchaseAction = "buy" | "rent" | "free";
 type PaymentMethod = "aba" | "bakong";
-
-type AccessState = {
-  unlocked: boolean;
-  action?: PurchaseAction;
-  wantToRead: boolean;
-};
+type AccessStatus = "none" | "pending" | "approved" | "rejected";
 
 function BackIcon() {
   return (
@@ -94,47 +89,70 @@ function formatPrice(price: number) {
   return `$${price.toFixed(2)}`;
 }
 
-function readInitialAccessState(storageKey: string): AccessState {
-  if (typeof window === "undefined") {
-    return { unlocked: false, wantToRead: false };
-  }
-
-  const raw = window.localStorage.getItem(storageKey);
-  if (!raw) {
-    return { unlocked: false, wantToRead: false };
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as AccessState;
-    return {
-      unlocked: !!parsed.unlocked,
-      action: parsed.action,
-      wantToRead: !!parsed.wantToRead,
-    };
-  } catch {
-    window.localStorage.removeItem(storageKey);
-    return { unlocked: false, wantToRead: false };
-  }
-}
-
-export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail }) {
+export default function ReaderBookDetailPage({
+  book,
+  userId,
+}: {
+  book: ReaderBookDetail;
+  userId?: string;
+}) {
   const router = useRouter();
-  const storageKey = `reader-book-access:${book.id}`;
-  const [modalAction, setModalAction] = useState<PurchaseAction | null>(null);
-  const [payerName, setPayerName] = useState("");
-  const [payerEmail, setPayerEmail] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("aba");
-  const [proofUploaded, setProofUploaded] = useState(false);
-  const [proofImageUrl, setProofImageUrl] = useState<string | undefined>();
-  const [proofFileName, setProofFileName] = useState<string | undefined>();
-  const [authorizeThisDevice, setAuthorizeThisDevice] = useState(true);
-  const [authorizeSecondDevice, setAuthorizeSecondDevice] = useState(false);
-  const [accessState, setAccessState] = useState<AccessState>(() => readInitialAccessState(storageKey));
 
-  function persistState(nextState: AccessState) {
-    setAccessState(nextState);
-    window.localStorage.setItem(storageKey, JSON.stringify(nextState));
-  }
+  const [modalAction, setModalAction] = useState<PurchaseAction | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("aba");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofFileName, setProofFileName] = useState<string | undefined>();
+  const [wantToRead, setWantToRead] = useState(false);
+  const [accessStatus, setAccessStatus] = useState<AccessStatus>("none");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Check if user already has access to this book
+  useEffect(() => {
+    async function checkAccess() {
+      if (!userId) return;
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) return;
+
+      // Check reader_library for approved access
+      const { data: libraryEntry } = await supabase
+        .from("reader_library")
+        .select("id, access_type, expires_at")
+        .eq("user_id", userId)
+        .eq("book_id", book.id)
+        .maybeSingle();
+
+      if (libraryEntry) {
+        // Check if rental expired
+        if (libraryEntry.expires_at) {
+          const expired = new Date(libraryEntry.expires_at as string) < new Date();
+          setAccessStatus(expired ? "none" : "approved");
+        } else {
+          setAccessStatus("approved");
+        }
+        return;
+      }
+
+      // Check transactions for pending
+      const { data: pendingTx } = await supabase
+        .from("transactions")
+        .select("id, status")
+        .eq("user_id", userId)
+        .eq("book_id", book.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (pendingTx) {
+        const status = pendingTx.status as string;
+        if (status === "Pending") setAccessStatus("pending");
+        else if (status === "Rejected") setAccessStatus("rejected");
+      }
+    }
+
+    void checkAccess();
+  }, [book.id]);
 
   const currentPrice = book.currentPrice ?? book.originalPrice ?? 0;
   const rentPrice = useMemo(() => Number((currentPrice * 0.15).toFixed(2)), [currentPrice]);
@@ -149,59 +167,73 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
 
   const paymentReady =
     modalAction === "free"
-      ? authorizeThisDevice || authorizeSecondDevice
-      : Boolean(payerName.trim()) &&
-        Boolean(payerEmail.trim()) &&
-        proofUploaded &&
-        (authorizeThisDevice || authorizeSecondDevice);
-
-  function handleToggleWantToRead() {
-    persistState({
-      ...accessState,
-      wantToRead: !accessState.wantToRead,
-    });
-  }
+      ? true
+      : proofFile !== null;
 
   function openAction(action: PurchaseAction) {
     setModalAction(action);
-    setPayerName("");
-    setPayerEmail("");
-    setProofUploaded(false);
-    setProofImageUrl(undefined);
+    setProofFile(null);
     setProofFileName(undefined);
-    setAuthorizeThisDevice(true);
-    setAuthorizeSecondDevice(false);
+    setSubmitMessage(null);
+    setSubmitError(null);
     setPaymentMethod("aba");
   }
 
-  function completeAction() {
-    if (!paymentReady || !modalAction) {
-      return;
+  async function handleSubmit() {
+    if (!modalAction || !paymentReady || submitting) return;
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      if (!userId) throw new Error("Please log in first");
+
+      let proofUrl: string | undefined;
+
+      // Convert proof image to base64 for storage
+      if (proofFile && modalAction !== "free") {
+        proofUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(proofFile);
+        });
+      }
+
+      const amount = modalAction === "rent" ? rentPrice : modalAction === "buy" ? currentPrice : 0;
+
+      const response = await fetch("/api/payment/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookId: book.id,
+          action: modalAction,
+          amount,
+          proofUrl,
+          paymentMethod,
+        }),
+      });
+
+      const result = await response.json() as { success?: boolean; status?: string; message?: string; error?: string };
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error ?? "Something went wrong");
+      }
+
+      if (result.status === "approved") {
+        setAccessStatus("approved");
+        setModalAction(null);
+      } else {
+        setAccessStatus("pending");
+        setSubmitMessage(result.message ?? "Payment submitted! Waiting for admin approval.");
+        setTimeout(() => setModalAction(null), 2500);
+      }
+
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
     }
-
-    persistState({
-      unlocked: true,
-      action: modalAction,
-      wantToRead: accessState.wantToRead,
-    });
-
-    appendReaderTransaction({
-      id: `${book.id}-${modalAction}-${Date.now()}`,
-      bookId: book.id,
-      bookTitle: book.title,
-      bookCover: book.imageSrc,
-      amountPaid: modalAction === "free" ? 0 : modalAction === "rent" ? rentPrice : currentPrice,
-      originalPrice: book.originalPrice,
-      action: modalAction,
-      purchasedAt: new Date().toISOString(),
-      status: modalAction === "free" ? "Verified" : "Pending",
-      reference: `SDL-${Date.now()}`,
-      method: modalAction === "free" ? "Free Access" : paymentMethod === "aba" ? "ABA QR" : "Bakong QR",
-      proofImageUrl,
-      proofFileName,
-    });
-
-    setModalAction(null);
   }
 
   const actionPrice =
@@ -214,25 +246,9 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
   const sampleHeadline = `${book.title} Sample`;
   const sampleText = `${book.description} ${book.description}`;
 
-  async function handleProofUpload(file: File | undefined) {
-    if (!file) {
-      setProofUploaded(false);
-      setProofImageUrl(undefined);
-      setProofFileName(undefined);
-      return;
-    }
-
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-
-    setProofUploaded(true);
-    setProofImageUrl(dataUrl);
-    setProofFileName(file.name);
-  }
+  // QR image: use book's payment_qr_url or fallback to local
+  const qrImageSrc = (book as unknown as Record<string, unknown>).paymentQrImageSrc as string | undefined
+    ?? "/User_Image/Library owner_image/QR.jpg";
 
   return (
     <>
@@ -252,13 +268,19 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
               </div>
 
               <div className="relative aspect-[2/3] overflow-hidden rounded-[0.85rem] border border-black/6 bg-white shadow-[0_20px_32px_rgba(15,23,42,0.12)]">
-                <Image
-                  src={book.imageSrc}
-                  alt={book.title}
-                  fill
-                  className="object-cover"
-                  sizes="(min-width: 1280px) 384px, (min-width: 1024px) 352px, 320px"
-                />
+                {book.imageSrc ? (
+                  <Image
+                    src={book.imageSrc}
+                    alt={book.title}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 1280px) 384px, (min-width: 1024px) 352px, 320px"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#e8eaee] to-[#d0d4dc]">
+                    <span className="text-2xl font-bold text-[#6b7482]">{book.title}</span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-7 space-y-2">
@@ -266,7 +288,7 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
                   Description :
                 </div>
                 <p className="text-[1rem] leading-8 text-[#7f7f7f] [font-family:'Iowan_Old_Style',Georgia,serif]">
-                  {book.description}
+                  {book.description || "No description available."}
                 </p>
               </div>
             </div>
@@ -315,6 +337,7 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
                 ) : null}
               </div>
 
+              {/* Sample preview */}
               <div className="rounded-[2.1rem] bg-[linear-gradient(135deg,#ff73cf_0%,#c88aff_28%,#72b7ff_68%,#5dd4ff_100%)] p-[1.5px] shadow-[0_18px_30px_rgba(129,139,255,0.18)]">
                 <div className="rounded-[calc(2.1rem-1.5px)] bg-[linear-gradient(135deg,rgba(255,246,252,0.92)_0%,rgba(255,255,255,0.96)_18%,rgba(245,250,255,0.98)_100%)] p-6">
                   <div className="flex items-center gap-3">
@@ -346,33 +369,52 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
                 </div>
               </div>
 
-              {accessState.unlocked ? (
+              {/* Access status banners */}
+              {accessStatus === "approved" && (
                 <div className="rounded-[1.4rem] border border-[#d8f0d1] bg-[#f6fff3] px-5 py-4 text-[#3d7f2f] shadow-[0_12px_20px_rgba(95,174,77,0.08)]">
-                  This book is authorized for your device{accessState.action ? ` via ${accessState.action}` : ""}.
+                  ✅ You have access to this book!
                 </div>
-              ) : null}
+              )}
+              {accessStatus === "pending" && (
+                <div className="rounded-[1.4rem] border border-[#fde68a] bg-[#fffbeb] px-5 py-4 text-[#92400e]">
+                  ⏳ Your payment is pending admin approval. You'll get access once verified.
+                </div>
+              )}
+              {accessStatus === "rejected" && (
+                <div className="rounded-[1.4rem] border border-[#fecaca] bg-[#fff5f5] px-5 py-4 text-[#991b1b]">
+                  ❌ Your previous payment was rejected. Please try again.
+                </div>
+              )}
 
               <div className="flex w-full max-w-[44rem] flex-col gap-4">
                 <button
                   type="button"
-                  onClick={handleToggleWantToRead}
+                  onClick={() => setWantToRead((v) => !v)}
                   className={`flex min-h-[4.4rem] w-full items-center justify-center gap-2 rounded-full border px-8 py-4 text-[1.15rem] font-semibold transition ${
-                    accessState.wantToRead
+                    wantToRead
                       ? "border-[#1f2530] bg-[#1f2530] text-white"
                       : "border-[#d4dae4] bg-white text-[#1f2530] hover:border-[#bfc8d6]"
                   }`}
                 >
                   <BookmarkIcon />
-                  {accessState.wantToRead ? "Saved to Want to read" : "Want to read"}
+                  {wantToRead ? "Saved to Want to read" : "Want to read"}
                 </button>
 
-                {accessState.unlocked ? (
+                {accessStatus === "approved" ? (
                   <button
                     type="button"
-                    onClick={() => router.push(`/book/${book.id}/read`)}
+                    onClick={() => router.push(`/book/${book.slug}/read`)}
                     className="min-h-[4.4rem] w-full rounded-full bg-[#1f2530] px-8 py-4 text-[1.15rem] font-semibold text-white shadow-[0_14px_24px_rgba(31,37,48,0.18)]"
                   >
                     Read now
+                  </button>
+                ) : accessStatus === "pending" ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="min-h-[4.4rem] w-full rounded-full bg-[#b5bdca] px-8 py-4 text-[1.15rem] font-semibold text-white cursor-not-allowed"
+                  >
+                    Awaiting approval...
                   </button>
                 ) : isFree ? (
                   <button
@@ -414,6 +456,7 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
         </div>
       </main>
 
+      {/* Payment Modal */}
       <div
         className={`fixed inset-0 z-50 transition-all duration-300 ${
           modalAction ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
@@ -436,7 +479,7 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#9aa2af]">
                   {modalAction === "rent"
-                    ? "Rent confirmation"
+                    ? "Rent confirmation — 30 days"
                     : modalAction === "buy"
                     ? "Purchase confirmation"
                     : "Claim free book"}
@@ -457,28 +500,11 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
 
             <div className="mt-6 grid gap-6 md:grid-cols-[minmax(0,1fr)_18rem]">
               <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#556072]">Full name</span>
-                    <input
-                      value={payerName}
-                      onChange={(event) => setPayerName(event.target.value)}
-                      placeholder="Reader name"
-                      className="h-12 w-full rounded-[1rem] border border-[#dde3ec] bg-white px-4 outline-none transition focus:border-[#8eaefb] focus:ring-4 focus:ring-[#8eaefb]/14"
-                    />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#556072]">Email</span>
-                    <input
-                      value={payerEmail}
-                      onChange={(event) => setPayerEmail(event.target.value)}
-                      placeholder="reader@email.com"
-                      className="h-12 w-full rounded-[1rem] border border-[#dde3ec] bg-white px-4 outline-none transition focus:border-[#8eaefb] focus:ring-4 focus:ring-[#8eaefb]/14"
-                    />
-                  </label>
-                </div>
-
-                {modalAction !== "free" ? (
+                {modalAction === "free" ? (
+                  <p className="text-sm leading-6 text-[#556072]">
+                    This book is free! Click confirm to add it to your library and start reading.
+                  </p>
+                ) : (
                   <>
                     <div className="space-y-2">
                       <p className="text-sm font-medium text-[#556072]">Payment method</p>
@@ -500,58 +526,69 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
                       </div>
                     </div>
 
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#556072]">
+                        1. Scan the QR code and pay {actionPrice}
+                      </p>
+                      <p className="text-sm font-medium text-[#556072]">
+                        2. Take a screenshot of the payment confirmation
+                      </p>
+                      <p className="text-sm font-medium text-[#556072]">
+                        3. Upload the screenshot below
+                      </p>
+                    </div>
+
                     <label className="space-y-2">
-                      <span className="text-sm font-medium text-[#556072]">Upload payment proof</span>
+                      <span className="text-sm font-medium text-[#556072]">Upload payment proof *</span>
                       <input
                         type="file"
                         accept="image/*,.pdf"
-                        onChange={(event) => void handleProofUpload(event.target.files?.[0])}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          setProofFile(file);
+                          setProofFileName(file?.name);
+                        }}
                         className="block w-full rounded-[1rem] border border-[#dde3ec] bg-white px-4 py-3 text-sm text-[#5d6777]"
                       />
+                      {proofFileName && (
+                        <p className="text-xs text-emerald-600">✅ {proofFileName} selected</p>
+                      )}
                     </label>
                   </>
-                ) : null}
+                )}
 
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-[#556072]">Authorize device access</p>
-                  <label className="flex items-center gap-3 text-sm text-[#5d6777]">
-                    <input
-                      type="checkbox"
-                      checked={authorizeThisDevice}
-                      onChange={(event) => setAuthorizeThisDevice(event.target.checked)}
-                      className="h-4 w-4 rounded border-[#c5cfdb]"
-                    />
-                    Allow reading on this device
-                  </label>
-                  <label className="flex items-center gap-3 text-sm text-[#5d6777]">
-                    <input
-                      type="checkbox"
-                      checked={authorizeSecondDevice}
-                      onChange={(event) => setAuthorizeSecondDevice(event.target.checked)}
-                      className="h-4 w-4 rounded border-[#c5cfdb]"
-                    />
-                    Allow reading on another device too
-                  </label>
-                </div>
+                {submitMessage && (
+                  <div className="rounded-[1rem] border border-[#d8f0d1] bg-[#f6fff3] px-4 py-3 text-sm text-[#3d7f2f]">
+                    {submitMessage}
+                  </div>
+                )}
+                {submitError && (
+                  <div className="rounded-[1rem] border border-[#fecaca] bg-[#fff5f5] px-4 py-3 text-sm text-[#991b1b]">
+                    {submitError}
+                  </div>
+                )}
               </div>
 
+              {/* QR Code panel */}
               <div className="rounded-[1.6rem] border border-[#e2e8f0] bg-[linear-gradient(180deg,#fbfcff_0%,#f6f8fc_100%)] p-4">
                 <div className="text-sm font-semibold uppercase tracking-[0.08em] text-[#8c95a5]">
                   {modalAction === "free" ? "Ready to unlock" : paymentMethod === "aba" ? "ABA QR" : "Bakong QR"}
                 </div>
-                <div className="mt-4 overflow-hidden rounded-[1.4rem] border border-black/6 bg-white shadow-[0_12px_22px_rgba(15,23,42,0.06)]">
-                  <Image
-                    src="/User_Image/Library owner_image/QR.jpg"
-                    alt="QR payment"
-                    width={480}
-                    height={480}
-                    className="h-auto w-full object-cover"
-                  />
-                </div>
+                {modalAction !== "free" && (
+                  <div className="mt-4 overflow-hidden rounded-[1.4rem] border border-black/6 bg-white shadow-[0_12px_22px_rgba(15,23,42,0.06)]">
+                    <Image
+                      src={qrImageSrc}
+                      alt="QR payment"
+                      width={480}
+                      height={480}
+                      className="h-auto w-full object-cover"
+                    />
+                  </div>
+                )}
                 <p className="mt-3 text-sm leading-6 text-[#6c7585]">
                   {modalAction === "free"
-                    ? "Confirm your device access and add this book to your reading rights."
-                    : "Scan this QR, complete the payment, upload the proof, and your reading access will unlock once confirmed."}
+                    ? "This book is free. Confirm to add it to your library."
+                    : "Scan this QR, complete the payment, upload the proof screenshot, and your access will unlock once the admin verifies it."}
                 </p>
               </div>
             </div>
@@ -559,11 +596,11 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
-                onClick={completeAction}
-                disabled={!paymentReady}
+                onClick={() => void handleSubmit()}
+                disabled={!paymentReady || submitting}
                 className="rounded-full bg-[#1f2530] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#313948] disabled:cursor-not-allowed disabled:bg-[#b5bdca]"
               >
-                Confirm and unlock
+                {submitting ? "Submitting..." : modalAction === "free" ? "Get free now" : "Submit payment"}
               </button>
             </div>
           </div>

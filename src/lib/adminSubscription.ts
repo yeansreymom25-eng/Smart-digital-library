@@ -1,6 +1,4 @@
-"use client";
-
-import { readStoredJson, writeStoredJson } from "@/src/lib/browserStorage";
+import { createServerClient } from "@supabase/ssr";
 
 export type AdminPlanName = "Normal" | "Pro" | "Premium";
 export type AdminPlanStatus =
@@ -19,8 +17,6 @@ export type AdminSubscription = {
   updatedAt: string | null;
 };
 
-export const ADMIN_SUBSCRIPTION_STORAGE_KEY = "admin-subscription";
-
 export const DEFAULT_ADMIN_SUBSCRIPTION: AdminSubscription = {
   plan: null,
   status: "not_selected",
@@ -31,56 +27,44 @@ export const DEFAULT_ADMIN_SUBSCRIPTION: AdminSubscription = {
   updatedAt: null,
 };
 
-function normalizeStoredSubscription(value: unknown): AdminSubscription {
-  if (!value || typeof value !== "object") {
-    return DEFAULT_ADMIN_SUBSCRIPTION;
-  }
+function getClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  );
+}
 
-  const nextValue = value as Partial<AdminSubscription>;
+function rowToSubscription(row: Record<string, unknown> | null): AdminSubscription {
+  if (!row) return DEFAULT_ADMIN_SUBSCRIPTION;
+
   const plan =
-    nextValue.plan === "Normal" ||
-    nextValue.plan === "Pro" ||
-    nextValue.plan === "Premium"
-      ? nextValue.plan
+    row.plan === "Normal" || row.plan === "Pro" || row.plan === "Premium"
+      ? (row.plan as AdminPlanName)
       : null;
+
   const status =
-    nextValue.status === "active" ||
-    nextValue.status === "pending" ||
-    nextValue.status === "rejected"
-      ? nextValue.status
+    row.status === "active" ||
+    row.status === "pending" ||
+    row.status === "rejected"
+      ? (row.status as AdminPlanStatus)
       : "not_selected";
 
   return {
     plan,
     status,
-    proofFileName:
-      typeof nextValue.proofFileName === "string" ? nextValue.proofFileName : "",
-    paymentReference:
-      typeof nextValue.paymentReference === "string"
-        ? nextValue.paymentReference
-        : "",
-    paymentNote:
-      typeof nextValue.paymentNote === "string" ? nextValue.paymentNote : "",
-    submittedAt:
-      typeof nextValue.submittedAt === "string" ? nextValue.submittedAt : null,
-    updatedAt:
-      typeof nextValue.updatedAt === "string" ? nextValue.updatedAt : null,
+    proofFileName: (row.proof_url as string) ?? "",
+    paymentReference: (row.payment_reference as string) ?? "",
+    paymentNote: "",
+    submittedAt: (row.submitted_at as string) ?? null,
+    updatedAt: (row.updated_at as string) ?? null,
   };
 }
 
 export function getPlanBookLimit(plan: AdminPlanName | null) {
-  if (plan === "Premium") {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  if (plan === "Pro") {
-    return 50;
-  }
-
-  if (plan === "Normal") {
-    return 20;
-  }
-
+  if (plan === "Premium") return Number.POSITIVE_INFINITY;
+  if (plan === "Pro") return 50;
+  if (plan === "Normal") return 20;
   return 0;
 }
 
@@ -88,22 +72,39 @@ export function formatPlanLimit(limit: number) {
   return Number.isFinite(limit) ? String(limit) : "Unlimited";
 }
 
-export function readAdminSubscription() {
-  const stored = readStoredJson<AdminSubscription>(ADMIN_SUBSCRIPTION_STORAGE_KEY);
-  const subscription = normalizeStoredSubscription(stored);
+export async function readAdminSubscription(userId: string): Promise<AdminSubscription> {
+  const supabase = getClient();
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("submitted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (!stored) {
-    writeStoredJson(ADMIN_SUBSCRIPTION_STORAGE_KEY, subscription);
-  }
-
-  return subscription;
+  if (error) throw new Error(error.message);
+  return rowToSubscription(data as Record<string, unknown> | null);
 }
 
-export function writeAdminSubscription(subscription: AdminSubscription) {
-  writeStoredJson(ADMIN_SUBSCRIPTION_STORAGE_KEY, subscription);
+export async function writeAdminSubscription(userId: string, subscription: AdminSubscription): Promise<void> {
+  const supabase = getClient();
+  const { error } = await supabase.from("subscriptions").upsert(
+    {
+      user_id: userId,
+      plan: subscription.plan,
+      status: subscription.status,
+      proof_url: subscription.proofFileName,
+      payment_reference: subscription.paymentReference,
+      submitted_at: subscription.submittedAt,
+      updated_at: subscription.updatedAt ?? new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error) throw new Error(error.message);
 }
 
-export function activateAdminPlan(plan: AdminPlanName) {
+export async function activateAdminPlan(userId: string, plan: AdminPlanName): Promise<AdminSubscription> {
   const nextValue: AdminSubscription = {
     plan,
     status: "active",
@@ -114,16 +115,19 @@ export function activateAdminPlan(plan: AdminPlanName) {
     updatedAt: new Date().toISOString(),
   };
 
-  writeAdminSubscription(nextValue);
+  await writeAdminSubscription(userId, nextValue);
   return nextValue;
 }
 
-export function submitAdminPlanForReview(input: {
-  plan: Exclude<AdminPlanName, "Normal">;
-  proofFileName: string;
-  paymentReference: string;
-  paymentNote: string;
-}) {
+export async function submitAdminPlanForReview(
+  userId: string,
+  input: {
+    plan: Exclude<AdminPlanName, "Normal">;
+    proofFileName: string;
+    paymentReference: string;
+    paymentNote: string;
+  }
+): Promise<AdminSubscription> {
   const now = new Date().toISOString();
   const nextValue: AdminSubscription = {
     plan: input.plan,
@@ -135,18 +139,21 @@ export function submitAdminPlanForReview(input: {
     updatedAt: now,
   };
 
-  writeAdminSubscription(nextValue);
+  await writeAdminSubscription(userId, nextValue);
   return nextValue;
 }
 
-export function updateAdminPlanReviewStatus(status: "active" | "rejected") {
-  const current = readAdminSubscription();
+export async function updateAdminPlanReviewStatus(
+  userId: string,
+  status: "active" | "rejected"
+): Promise<AdminSubscription> {
+  const current = await readAdminSubscription(userId);
   const nextValue: AdminSubscription = {
     ...current,
     status,
     updatedAt: new Date().toISOString(),
   };
 
-  writeAdminSubscription(nextValue);
+  await writeAdminSubscription(userId, nextValue);
   return nextValue;
 }

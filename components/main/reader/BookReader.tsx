@@ -24,9 +24,11 @@ function useDesktopSpread() {
 export default function BookReader({
   book,
   pages,
+  isUnlocked = false,
 }: {
   book: ReaderBookDetail;
   pages: ReaderContentPage[];
+  isUnlocked?: boolean;
 }) {
   const router = useRouter();
   const immersiveRef = useRef<HTMLDivElement | null>(null);
@@ -34,29 +36,10 @@ export default function BookReader({
   const desktop = useDesktopSpread();
 
   const [fullscreen, setFullscreen] = useState(false);
-  const [unlocked] = useState(() => {
-    if (book.access === "free") {
-      return true;
-    }
-
-    if (typeof window === "undefined") {
-      return false;
-    }
-
-    const raw = window.localStorage.getItem(`reader-book-access:${book.id}`);
-    if (!raw) {
-      return false;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as { unlocked?: boolean };
-      return !!parsed.unlocked;
-    } catch {
-      window.localStorage.removeItem(`reader-book-access:${book.id}`);
-      return false;
-    }
-  });
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Use isUnlocked prop from server — no more localStorage
+  const unlocked = isUnlocked || book.access === "free";
 
   const visiblePages = useMemo(() => (unlocked ? pages : pages.slice(0, 2)), [pages, unlocked]);
   const step = desktop ? 2 : 1;
@@ -67,15 +50,11 @@ export default function BookReader({
   }, [currentIndex, desktop, step, visiblePages.length]);
 
   const toggleFullscreen = async () => {
-    if (!immersiveRef.current) {
-      return;
-    }
-
+    if (!immersiveRef.current) return;
     if (document.fullscreenElement) {
       await document.exitFullscreen();
       return;
     }
-
     await immersiveRef.current.requestFullscreen();
   };
 
@@ -85,12 +64,10 @@ export default function BookReader({
         event.preventDefault();
         setCurrentIndex((previous) => Math.min(previous + step, Math.max(0, visiblePages.length - step)));
       }
-
       if (event.key === "ArrowLeft") {
         event.preventDefault();
         setCurrentIndex((previous) => Math.max(previous - step, 0));
       }
-
       if (event.key.toLowerCase() === "f") {
         event.preventDefault();
         void toggleFullscreen();
@@ -105,7 +82,6 @@ export default function BookReader({
     function syncFullscreen() {
       setFullscreen(Boolean(document.fullscreenElement));
     }
-
     document.addEventListener("fullscreenchange", syncFullscreen);
     return () => document.removeEventListener("fullscreenchange", syncFullscreen);
   }, []);
@@ -134,27 +110,17 @@ export default function BookReader({
       onTouchEnd={(event) => {
         const startX = touchStartX.current;
         const endX = event.changedTouches[0]?.clientX ?? null;
-
-        if (startX === null || endX === null) {
-          return;
-        }
-
+        if (startX === null || endX === null) return;
         const distance = endX - startX;
-
-        if (distance <= -50) {
-          goNext();
-        }
-
-        if (distance >= 50) {
-          goPrevious();
-        }
+        if (distance <= -50) goNext();
+        if (distance >= 50) goPrevious();
       }}
     >
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[120rem] flex-col gap-5">
         <ReaderToolbar
           title={book.title}
           pageLabel={pageLabel}
-          onBack={() => router.push(`/book/${book.id}`)}
+          onBack={() => router.push(`/book/${book.slug ?? book.id}`)}
           onPrevious={goPrevious}
           onNext={goNext}
           onToggleFullscreen={() => void toggleFullscreen()}

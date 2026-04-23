@@ -1,11 +1,11 @@
-"use client";
-
-import { readStoredJson, writeStoredJson } from "@/src/lib/browserStorage";
+import { createServerClient } from "@supabase/ssr";
 
 export type AdminTransaction = {
   id: string;
   user: string;
   book: string;
+  userId: string;
+  bookId: string;
   type: "Rent" | "Purchase" | "Subscription";
   amount: string;
   date: string;
@@ -13,109 +13,65 @@ export type AdminTransaction = {
   proofReference: string;
 };
 
-const ADMIN_TRANSACTIONS_STORAGE_KEY = "admin-transactions";
-
-const defaultAdminTransactions: AdminTransaction[] = [
-  {
-    id: "bormey-art-of-programming",
-    user: "Bormey",
-    book: "The Art of Programming",
-    type: "Rent",
-    amount: "$2.99",
-    date: "1/15/2026",
-    status: "Approved",
-    proofReference: "Receipt screenshot uploaded at 10:24 AM",
-  },
-  {
-    id: "mean-digital-marketing",
-    user: "Mean",
-    book: "Digital Marketing",
-    type: "Rent",
-    amount: "$2.99",
-    date: "1/15/2026",
-    status: "Approved",
-    proofReference: "QR payment receipt uploaded at 11:02 AM",
-  },
-  {
-    id: "vith-leadership-principle",
-    user: "Vith",
-    book: "Leadership Principle",
-    type: "Purchase",
-    amount: "$5.99",
-    date: "1/15/2026",
-    status: "Approved",
-    proofReference: "Purchase confirmation receipt uploaded at 1:15 PM",
-  },
-  {
-    id: "lina-history-of-idea",
-    user: "Lina",
-    book: "History of Idea",
-    type: "Rent",
-    amount: "$2.99",
-    date: "1/15/2026",
-    status: "Pending",
-    proofReference: "Pending proof review from uploaded payment image",
-  },
-];
-
-function normalizeStoredTransactions(value: AdminTransaction[] | null) {
-  if (!Array.isArray(value)) {
-    return defaultAdminTransactions;
-  }
-
-  return value.filter(
-    (item) =>
-      typeof item?.id === "string" &&
-      typeof item?.user === "string" &&
-      typeof item?.book === "string" &&
-      (item?.type === "Rent" ||
-        item?.type === "Purchase" ||
-        item?.type === "Subscription") &&
-      typeof item?.amount === "string" &&
-      typeof item?.date === "string" &&
-      (item?.status === "Approved" ||
-        item?.status === "Pending" ||
-        item?.status === "Rejected") &&
-      typeof item?.proofReference === "string"
-  ) as AdminTransaction[];
-}
-
-function writeAdminTransactions(transactions: AdminTransaction[]) {
-  writeStoredJson(ADMIN_TRANSACTIONS_STORAGE_KEY, transactions);
-}
-
-export function readAdminTransactions() {
-  const stored = readStoredJson<AdminTransaction[]>(
-    ADMIN_TRANSACTIONS_STORAGE_KEY
+function getClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
   );
-  const transactions = normalizeStoredTransactions(stored);
-
-  if (!stored) {
-    writeAdminTransactions(transactions);
-  }
-
-  return transactions;
 }
 
-export function updateAdminTransactionStatus(
+function rowToTransaction(row: Record<string, unknown>): AdminTransaction {
+  return {
+    id: row.id as string,
+    user: (row.user_id as string) ?? "",
+    book: (row.book_id as string) ?? "",
+    type: row.type as AdminTransaction["type"],
+    amount: (row.amount as string) ?? "$0.00",
+    date: row.created_at
+      ? new Date(row.created_at as string).toLocaleDateString("en-US")
+      : "",
+    status: row.status as AdminTransaction["status"],
+    proofReference: (row.proof_url as string) ?? "",
+  };
+}
+
+export async function readAdminTransactions(): Promise<AdminTransaction[]> {
+  const supabase = getClient();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => rowToTransaction(row as Record<string, unknown>));
+}
+
+export async function updateAdminTransactionStatus(
   transactionId: string,
   status: AdminTransaction["status"]
-) {
-  const nextTransactions = readAdminTransactions().map((transaction) =>
-    transaction.id === transactionId ? { ...transaction, status } : transaction
-  );
+): Promise<AdminTransaction[]> {
+  const supabase = getClient();
+  const { error } = await supabase
+    .from("transactions")
+    .update({ status })
+    .eq("id", transactionId);
 
-  writeAdminTransactions(nextTransactions);
-
-  return nextTransactions;
+  if (error) throw new Error(error.message);
+  return readAdminTransactions();
 }
 
-export function createAdminTransaction(transaction: Omit<AdminTransaction, "id">) {
-  const transactions = readAdminTransactions();
-  const uniqueId = `transaction-${crypto.randomUUID().slice(0, 8)}`;
-  const nextTransactions = [{ id: uniqueId, ...transaction }, ...transactions];
+export async function createAdminTransaction(transaction: Omit<AdminTransaction, "id">): Promise<AdminTransaction[]> {
+  const supabase = getClient();
+  const { error } = await supabase.from("transactions").insert({
+    user_id: transaction.user,
+    book_id: transaction.book,
+    type: transaction.type,
+    amount: transaction.amount,
+    status: transaction.status,
+    proof_url: transaction.proofReference,
+  });
 
-  writeAdminTransactions(nextTransactions);
-
-  return nextTransactions;
+  if (error) throw new Error(error.message);
+  return readAdminTransactions();
 }

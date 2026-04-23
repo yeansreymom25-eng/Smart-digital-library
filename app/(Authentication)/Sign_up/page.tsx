@@ -103,11 +103,11 @@ export default function SignupPage() {
           role: accountRole,
         }),
       });
-      const result = (await response.json()) as { success: boolean; message: string };
+      const result = (await response.json()) as { success: boolean; error?: string; message?: string };
 
       if (!response.ok || !result.success) {
         return setErrorMsg(
-          toFriendlyAuthMessage(result.message || "Unable to create your account.")
+          toFriendlyAuthMessage(result.error ?? result.message ?? "Unable to create your account.")
         );
       }
 

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useLogout } from "@/src/hooks/useLogout";
 
 const links = [
   {
@@ -19,6 +22,13 @@ const links = [
 ];
 
 export default function DropdownAccountPanel({ onNavigate }: { onNavigate: () => void }) {
+  const { logout, isLoading } = useLogout();
+
+  async function handleLogout() {
+    onNavigate();
+    await logout();
+  }
+
   return (
     <div className="mt-5 grid gap-3">
       {links.map((link) => (
@@ -32,6 +42,18 @@ export default function DropdownAccountPanel({ onNavigate }: { onNavigate: () =>
           <div className="mt-1 text-xs leading-5 text-[#8790a0]">{link.description}</div>
         </Link>
       ))}
+
+      <button
+        type="button"
+        onClick={() => void handleLogout()}
+        disabled={isLoading}
+        className="rounded-[1.3rem] border border-[#ffe4e4] bg-[#fff5f5] px-4 py-4 text-left transition hover:bg-[#ffefef] disabled:opacity-50"
+      >
+        <div className="text-sm font-semibold text-[#c93d3d]">
+          {isLoading ? "Logging out…" : "Logout"}
+        </div>
+        <div className="mt-1 text-xs leading-5 text-[#e08080]">Sign out of your account.</div>
+      </button>
     </div>
   );
 }

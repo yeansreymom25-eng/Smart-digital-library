@@ -3,144 +3,89 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  createAdminCategory,
-  readAdminCategories,
-  updateAdminCategory,
-  type AdminCategory,
-  type CategoryLibraryType,
-} from "@/src/lib/adminCategories";
+import type { AdminCategory, CategoryLibraryType } from "@/src/lib/adminCategories";
 
 type CategoryFormProps = {
   mode: "create" | "edit";
   categoryId?: string;
+  initialCategory?: AdminCategory | null;
 };
 
-export default function CategoryForm({
-  mode,
-  categoryId,
-}: CategoryFormProps) {
+export default function CategoryForm({ mode, categoryId, initialCategory }: CategoryFormProps) {
   const router = useRouter();
-  const existingCategory =
-    mode === "edit" && categoryId
-      ? readAdminCategories().find((item) => item.id === categoryId) ?? null
-      : null;
-  const [name, setName] = useState(existingCategory?.name ?? "");
-  const [libraryType, setLibraryType] = useState<CategoryLibraryType>(existingCategory?.libraryType ?? "english");
-  const [description, setDescription] = useState(existingCategory?.description ?? "");
-  const [books, setBooks] = useState(existingCategory ? String(existingCategory.books) : "0");
+  const [name, setName] = useState(initialCategory?.name ?? "");
+  const [libraryType, setLibraryType] = useState<CategoryLibraryType>(initialCategory?.libraryType ?? "english");
+  const [description, setDescription] = useState(initialCategory?.description ?? "");
+  const [books, setBooks] = useState(initialCategory ? String(initialCategory.books) : "0");
   const [errorMessage, setErrorMessage] = useState("");
-  const isReady = mode === "create" || Boolean(existingCategory);
-  const isMissing = mode === "edit" && !existingCategory;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function validateInput(existingCategories: AdminCategory[]) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrorMessage("");
+
     const trimmedName = name.trim();
     const trimmedDescription = description.trim();
     const parsedBooks = Number(books);
 
-    if (!trimmedName) {
-      return "Category name is required.";
+    if (!trimmedName) return setErrorMessage("Category name is required.");
+    if (!trimmedDescription) return setErrorMessage("Description is required.");
+    if (!Number.isInteger(parsedBooks) || parsedBooks < 0) return setErrorMessage("Book count must be 0 or greater.");
+
+    setIsSubmitting(true);
+
+    try {
+      const payload = {
+        name: trimmedName,
+        libraryType,
+        description: trimmedDescription,
+        books: parsedBooks,
+      };
+
+      let res: Response;
+
+      if (mode === "create") {
+        res = await fetch("/api/admin/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch(`/api/admin/categories/${categoryId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        setErrorMessage(data.error ?? "Something went wrong.");
+        return;
+      }
+
+      router.push("/library-owner/categories");
+      router.refresh();
+    } catch {
+      setErrorMessage("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const duplicate = existingCategories.find(
-      (item) =>
-        item.id !== categoryId &&
-        item.libraryType === libraryType &&
-        item.name.trim().toLowerCase() === trimmedName.toLowerCase()
-    );
-
-    if (duplicate) {
-      return "Category name already exists in this book type.";
-    }
-
-    if (!trimmedDescription) {
-      return "Description is required.";
-    }
-
-    if (!Number.isInteger(parsedBooks) || parsedBooks < 0) {
-      return "Book count must be 0 or greater.";
-    }
-
-    return "";
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const existingCategories = readAdminCategories();
-    const validationMessage = validateInput(existingCategories);
-
-    if (validationMessage) {
-      setErrorMessage(validationMessage);
-      return;
-    }
-
-    const nextCategory = {
-      name: name.trim(),
-      libraryType,
-      description: description.trim(),
-      books: Number(books),
-    };
-
-    if (mode === "create") {
-      createAdminCategory(nextCategory);
-    } else if (categoryId) {
-      updateAdminCategory(categoryId, nextCategory);
-    }
-
-    router.push("/library-owner/categories");
-  }
-
-  const pageTitle =
-    mode === "create" ? "Add category" : isMissing ? "Category not found" : "Edit category";
+  const pageTitle = mode === "create" ? "Add category" : "Edit category";
   const pageDescription =
     mode === "create"
       ? "Create a category under English books or Khmer books so it matches the reader-side structure."
       : "Update the category details and keep the English or Khmer grouping consistent.";
 
-  if (!isReady) {
-    return (
-      <section className="rounded-[18px] border border-[#d8e6fb] bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.12)]">
-        <p className="text-base text-[#4d6691]">Loading category...</p>
-      </section>
-    );
-  }
-
-  if (isMissing) {
-    return (
-      <section className="rounded-[18px] border border-[#d8e6fb] bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.12)]">
-        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#1f4a8a]">
-          Categories
-        </p>
-        <h1 className="mt-3 text-[2.5rem] font-bold leading-none text-[#173b73]">
-          Category not found
-        </h1>
-        <p className="mt-3 text-base leading-7 text-[#5c7297]">
-          The category you tried to edit is no longer available.
-        </p>
-        <Link
-          href="/library-owner/categories"
-          className="mt-6 inline-flex rounded-xl bg-[#4d98f0] px-5 py-3 text-base font-semibold text-white transition hover:bg-[#3789ea]"
-        >
-          Back to Categories
-        </Link>
-      </section>
-    );
-  }
-
   return (
     <section className="flex min-h-[calc(100vh-1.5rem)] flex-col rounded-[18px] border border-[#d8e6fb] bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.12)] sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#1f4a8a]">
-            Categories
-          </p>
-          <h1 className="mt-3 text-[2.5rem] font-bold leading-none text-[#173b73]">
-            {pageTitle}
-          </h1>
-          <p className="mt-3 max-w-3xl text-base leading-7 text-[#5c7297] sm:text-lg">
-            {pageDescription}
-          </p>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#1f4a8a]">Categories</p>
+          <h1 className="mt-3 text-[2.5rem] font-bold leading-none text-[#173b73]">{pageTitle}</h1>
+          <p className="mt-3 max-w-3xl text-base leading-7 text-[#5c7297] sm:text-lg">{pageDescription}</p>
         </div>
         <Link
           href="/library-owner/categories"
@@ -151,15 +96,13 @@ export default function CategoryForm({
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+      <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-5">
         <div className="grid gap-5 lg:grid-cols-2">
           <label className="block">
-            <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.18em] text-[#1f4a8a]">
-              Book Type
-            </span>
+            <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.18em] text-[#1f4a8a]">Book Type</span>
             <select
               value={libraryType}
-              onChange={(event) => setLibraryType(event.target.value as CategoryLibraryType)}
+              onChange={(e) => setLibraryType(e.target.value as CategoryLibraryType)}
               className="w-full rounded-xl border border-[#c8dcff] bg-white px-5 py-4 text-base text-[#1e3a6d] outline-none"
             >
               <option value="english">English Books</option>
@@ -168,13 +111,11 @@ export default function CategoryForm({
           </label>
 
           <label className="block">
-            <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.18em] text-[#1f4a8a]">
-              Category Name
-            </span>
+            <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.18em] text-[#1f4a8a]">Category Name</span>
             <input
               type="text"
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder={libraryType === "english" ? "Self-Help" : "Khmer Knowledge"}
               className="w-full rounded-xl border border-[#c8dcff] bg-white px-5 py-4 text-base text-[#1e3a6d] outline-none placeholder:text-[#5678a8]"
             />
@@ -182,12 +123,10 @@ export default function CategoryForm({
         </div>
 
         <label className="block">
-          <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.18em] text-[#1f4a8a]">
-            Description
-          </span>
+          <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.18em] text-[#1f4a8a]">Description</span>
           <textarea
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe this category"
             rows={4}
             className="w-full rounded-xl border border-[#c8dcff] bg-white px-5 py-4 text-base text-[#1e3a6d] outline-none placeholder:text-[#5678a8]"
@@ -195,15 +134,13 @@ export default function CategoryForm({
         </label>
 
         <label className="block max-w-xs">
-          <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.18em] text-[#1f4a8a]">
-            Book Count
-          </span>
+          <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.18em] text-[#1f4a8a]">Book Count</span>
           <input
             type="number"
             min="0"
             step="1"
             value={books}
-            onChange={(event) => setBooks(event.target.value)}
+            onChange={(e) => setBooks(e.target.value)}
             className="w-full rounded-xl border border-[#c8dcff] bg-white px-5 py-4 text-base text-[#1e3a6d] outline-none"
           />
         </label>
@@ -223,9 +160,10 @@ export default function CategoryForm({
           </Link>
           <button
             type="submit"
-            className="rounded-xl bg-[#4d98f0] px-6 py-3 text-base font-semibold text-white transition hover:bg-[#3789ea]"
+            disabled={isSubmitting}
+            className="rounded-xl bg-[#4d98f0] px-6 py-3 text-base font-semibold text-white transition hover:bg-[#3789ea] disabled:opacity-50"
           >
-            {mode === "create" ? "Save Category" : "Update Category"}
+            {isSubmitting ? "Saving..." : mode === "create" ? "Save Category" : "Update Category"}
           </button>
         </div>
       </form>

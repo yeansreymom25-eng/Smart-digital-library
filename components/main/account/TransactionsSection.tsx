@@ -34,8 +34,8 @@ function formatAmount(amount: number) {
   return `$${amount.toFixed(2)}`;
 }
 
-export default function TransactionsSection() {
-  const [transactions] = useState<ReaderTransactionRecord[]>(() => getReaderTransactions());
+export default function TransactionsSection({ initialTransactions = [] }: { initialTransactions?: ReaderTransactionRecord[] }) {
+  const [transactions] = useState<ReaderTransactionRecord[]>(initialTransactions);
   const [statusFilter, setStatusFilter] = useState<ReaderTransactionStatus | "All">("All");
   const [search, setSearch] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<ReaderTransactionRecord | null>(null);

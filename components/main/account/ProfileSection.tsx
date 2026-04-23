@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { getReaderProfile, saveReaderProfile, type ReaderProfileData } from "@/src/lib/readerAccountStorage";
+import type { ReaderProfileData } from "@/src/lib/readerAccountStorage";
 
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
@@ -45,9 +45,9 @@ async function fileToDataUrl(file: File) {
   });
 }
 
-export default function ProfileSection() {
-  const [profile, setProfile] = useState<ReaderProfileData>(() => getReaderProfile());
-  const [draft, setDraft] = useState<ReaderProfileData>(profile);
+export default function ProfileSection({ initialProfile, userId }: { initialProfile: ReaderProfileData; userId: string }) {
+  const [profile, setProfile] = useState<ReaderProfileData>(initialProfile);
+  const [draft, setDraft] = useState<ReaderProfileData>(initialProfile);
   const [editing, setEditing] = useState(false);
 
   const initials = useMemo(() => {
@@ -68,10 +68,27 @@ export default function ProfileSection() {
     setDraft((current) => ({ ...current, avatarDataUrl }));
   }
 
-  function handleSave() {
-    setProfile(draft);
-    saveReaderProfile(draft);
-    setEditing(false);
+  async function handleSave() {
+    try {
+      await fetch("/api/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: draft.fullName,
+          avatarDataUrl: draft.avatarDataUrl,
+          phone: draft.phone,
+          gender: draft.gender,
+          dateOfBirth: draft.dateOfBirth,
+          country: draft.country,
+          bio: draft.bio,
+        }),
+      });
+      setProfile(draft);
+      setEditing(false);
+    } catch {
+      setProfile(draft);
+      setEditing(false);
+    }
   }
 
   function handleCancel() {
