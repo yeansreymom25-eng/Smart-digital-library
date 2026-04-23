@@ -188,7 +188,7 @@ export default function ExploreBookstorePage({ dbBooks = [] }: { dbBooks?: Reade
         </div>
       </section>
 
-      <main className="mx-auto flex w-full flex-col gap-12 px-4 py-8 sm:px-6 lg:gap-14 lg:px-8 xl:px-10">
+      <main className="mx-auto flex w-full flex-col gap-12 px-4 pb-8 pt-32 sm:px-6 lg:gap-14 lg:px-8 xl:px-10">
         {dbBooks.length === 0 ? (
           <div className="py-20 text-center">
             <p className="text-2xl font-semibold text-slate-400">No books available yet</p>
