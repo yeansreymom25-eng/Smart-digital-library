@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ReaderProfileData } from "@/src/lib/readerAccountStorage";
 
 function ProfileRow({ label, value }: { label: string; value: string }) {
@@ -46,6 +47,7 @@ async function fileToDataUrl(file: File) {
 }
 
 export default function ProfileSection({ initialProfile, userId }: { initialProfile: ReaderProfileData; userId: string }) {
+  const router = useRouter();
   const [profile, setProfile] = useState<ReaderProfileData>(initialProfile);
   const [draft, setDraft] = useState<ReaderProfileData>(initialProfile);
   const [editing, setEditing] = useState(false);
@@ -85,9 +87,7 @@ export default function ProfileSection({ initialProfile, userId }: { initialProf
       });
       setProfile(draft);
       setEditing(false);
-    } catch {
-      setProfile(draft);
-      setEditing(false);
+      router.refresh();
     }
   }
 

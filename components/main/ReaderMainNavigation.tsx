@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import DropdownAccountPanel from "@/components/main/account/DropdownAccountPanel";
-import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
+import { useReaderUser } from "@/src/hooks/useReaderUser";
 
 const primaryLinks = [
   { href: "/home", label: "Home" },
@@ -60,56 +60,19 @@ function NavLink({ href, label }: { href: string; label: string }) {
 export default function ReaderMainNavigation() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [navVisible, setNavVisible] = useState(true);
-  const [userFullName, setUserFullName] = useState("Smart Reader");
-  const [userEmail, setUserEmail] = useState("");
-  const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const lastScrollYRef = useRef(0);
-
-  // Load real user info from Supabase
-  useEffect(() => {
-    async function loadUser() {
-      const supabase = getSupabaseBrowserClient();
-      if (!supabase) return;
-
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) return;
-
-      // Set email immediately from auth
-      setUserEmail(user.email ?? "");
-
-      // Set name from metadata as quick fallback
-      if (user.user_metadata?.full_name) {
-        setUserFullName(user.user_metadata.full_name as string);
-      } else if (user.user_metadata?.name) {
-        setUserFullName(user.user_metadata.name as string);
-      }
-
-      // Then fetch profile for full_name and avatar
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profile?.full_name) setUserFullName(profile.full_name as string);
-      if (profile?.avatar_url) setUserAvatar(profile.avatar_url as string);
-    }
-
-    void loadUser();
-  }, []);
+  const user = useReaderUser();
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const previousOverflow = document.body.style.overflow;
+    const prev = document.body.style.overflow;
     document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [menuOpen]);
 
   useEffect(() => {
-    function handleKeydown(event: KeyboardEvent) {
-      if (event.key === "Escape") setMenuOpen(false);
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
     }
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
@@ -117,43 +80,23 @@ export default function ReaderMainNavigation() {
 
   useEffect(() => {
     function handleScroll() {
-      const currentScrollY = window.scrollY;
-      const previousScrollY = lastScrollYRef.current;
-
-      if (currentScrollY < 24) {
-        setNavVisible(true);
-        lastScrollYRef.current = currentScrollY;
-        return;
-      }
-
-      if (currentScrollY > previousScrollY + 6) {
-        setNavVisible(false);
-      } else if (currentScrollY < previousScrollY - 6) {
-        setNavVisible(true);
-      }
-
-      lastScrollYRef.current = currentScrollY;
+      const cur = window.scrollY;
+      const prev = lastScrollYRef.current;
+      if (cur < 24) { setNavVisible(true); lastScrollYRef.current = cur; return; }
+      if (cur > prev + 6) setNavVisible(false);
+      else if (cur < prev - 6) setNavVisible(true);
+      lastScrollYRef.current = cur;
     }
-
     lastScrollYRef.current = window.scrollY;
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const initials = userFullName
-    .split(" ")
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   return (
     <>
       <header
         className={`pointer-events-none fixed inset-x-0 top-0 z-40 px-4 pt-5 transition-all duration-300 sm:px-6 lg:px-8 ${
-          menuOpen || navVisible
-            ? "translate-y-0 opacity-100"
-            : "-translate-y-[120%] opacity-0"
+          menuOpen || navVisible ? "translate-y-0 opacity-100" : "-translate-y-[120%] opacity-0"
         }`}
       >
         <div className="pointer-events-auto mx-auto flex w-full max-w-[96rem] items-center gap-4">
@@ -189,15 +132,18 @@ export default function ReaderMainNavigation() {
             </div>
           </div>
 
+          {/* Avatar button */}
           <button
             type="button"
-            onClick={() => setMenuOpen((current) => !current)}
+            onClick={() => setMenuOpen((v) => !v)}
             aria-label="Open account menu"
             className="flex h-[4.1rem] w-[4.1rem] items-center justify-center overflow-hidden rounded-full border border-white/70 bg-white/78 text-black shadow-[0_16px_28px_rgba(15,23,42,0.16)] transition hover:scale-[1.02]"
           >
-            {userAvatar ? (
+            {user.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={userAvatar} alt={userFullName} className="h-full w-full object-cover" />
+              <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
+            ) : user.initials ? (
+              <span className="text-sm font-bold text-[#3b4350]">{user.initials}</span>
             ) : (
               <ProfileIcon />
             )}
@@ -205,8 +151,8 @@ export default function ReaderMainNavigation() {
         </div>
       </header>
 
-      {menuOpen ? (
-        <div className="fixed inset-0 z-50 opacity-100 transition-opacity duration-300">
+      {menuOpen && (
+        <div className="fixed inset-0 z-50">
           <button
             type="button"
             aria-label="Close account menu"
@@ -220,19 +166,20 @@ export default function ReaderMainNavigation() {
                 <p className="text-[0.9rem] font-medium tracking-[0.01em] text-[#818a99]">Account</p>
 
                 <div className="mt-4 flex items-center gap-3.5">
-                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-white shadow-[0_10px_20px_rgba(15,23,42,0.08)]">
-                    {userAvatar ? (
+                  {/* Avatar in dropdown */}
+                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-[#f1f4f8] shadow-[0_10px_20px_rgba(15,23,42,0.08)]">
+                    {user.avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={userAvatar} alt={userFullName} className="h-full w-full object-cover" />
+                      <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
                     ) : (
-                      <span className="text-lg font-semibold text-[#3b4350]">{initials}</span>
+                      <span className="text-lg font-bold text-[#3b4350]">{user.initials}</span>
                     )}
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[1.15rem] font-semibold tracking-[-0.03em] text-[#1e2430]">
-                      {userFullName}
+                      {user.fullName || "Loading…"}
                     </p>
-                    <p className="truncate text-sm text-[#657083]">{userEmail}</p>
+                    <p className="truncate text-sm text-[#657083]">{user.email}</p>
                   </div>
                 </div>
 
@@ -241,7 +188,7 @@ export default function ReaderMainNavigation() {
             </div>
           </div>
         </div>
-      ) : null}
+      )}
     </>
   );
 }
