@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { AdminPlanName, AdminSubscription } from "@/src/lib/adminSubscription";
+import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
 
 type Plan = {
   name: "Normal" | "Premium" | "Pro";
@@ -74,18 +75,21 @@ export default function AdminSubscriptionClient({
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(
     () => initialSubscription.plan ? plans.find((p) => p.name === initialSubscription.plan) ?? null : null
   );
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofFileName, setProofFileName] = useState(initialSubscription.proofFileName);
   const [paymentReference, setPaymentReference] = useState(initialSubscription.paymentReference);
   const [paymentNote, setPaymentNote] = useState(initialSubscription.paymentNote);
   const [paymentSubmitted, setPaymentSubmitted] = useState(initialSubscription.status === "pending");
   const [subscriptionStatus, setSubscriptionStatus] = useState(initialSubscription.status);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
 
   function handleChoosePlan(plan: Plan) {
     setSelectedPlan(plan);
     setPaymentSubmitted(false);
     setSubscriptionStatus("not_selected");
+    setUploadError(null);
     if (plan.name !== "Normal") {
       requestAnimationFrame(() => {
         paymentSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -109,9 +113,35 @@ export default function AdminSubscriptionClient({
   }
 
   async function handleSubmitProof() {
-    if (!selectedPlan || selectedPlan.name === "Normal" || !proofFileName || !userId) return;
+    if (!selectedPlan || selectedPlan.name === "Normal" || !proofFile || !userId) return;
     setIsSubmitting(true);
+    setUploadError(null);
+
     try {
+      // Upload proof file to Supabase Storage
+      const supabase = getSupabaseBrowserClient();
+      let uploadedProofUrl = proofFileName; // fallback to filename
+
+      if (supabase && proofFile) {
+        const fileExt = proofFile.name.split(".").pop() ?? "jpg";
+        const filePath = `subscription-proofs/${userId}/${Date.now()}.${fileExt}`;
+
+        const { error: storageError } = await supabase.storage
+          .from("proofs")
+          .upload(filePath, proofFile, { upsert: true });
+
+        if (storageError) {
+          // If storage fails, just use the filename as reference
+          console.warn("Storage upload failed, using filename as reference:", storageError.message);
+          uploadedProofUrl = proofFile.name;
+        } else {
+          const { data: urlData } = supabase.storage
+            .from("proofs")
+            .getPublicUrl(filePath);
+          uploadedProofUrl = urlData.publicUrl;
+        }
+      }
+
       await fetch("/api/admin/subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,13 +149,15 @@ export default function AdminSubscriptionClient({
           userId,
           plan: selectedPlan.name,
           status: "pending",
-          proofFileName,
+          proofFileName: uploadedProofUrl,
           paymentReference: paymentReference.trim(),
           paymentNote: paymentNote.trim(),
         }),
       });
       setSubscriptionStatus("pending");
       setPaymentSubmitted(true);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -257,7 +289,12 @@ export default function AdminSubscriptionClient({
                         <label className="block">
                           <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[#6a8db5]">Payment proof</span>
                           <input type="file" accept="image/*,.pdf"
-                            onChange={(e) => setProofFileName(e.target.files?.[0]?.name ?? "")}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] ?? null;
+                              setProofFile(file);
+                              setProofFileName(file?.name ?? "");
+                              setUploadError(null);
+                            }}
                             className="block w-full rounded-xl border-2 border-[#b3d2ff] bg-white px-4 py-3 text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-[#e8f1ff] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#316dbf]" />
                         </label>
                         <label className="block">
@@ -285,10 +322,17 @@ export default function AdminSubscriptionClient({
                         </div>
                       ) : null}
 
+                      {uploadError && (
+                        <div className="mt-4 rounded-xl border-2 border-[#fca5a5] bg-[#fff5f5] px-4 py-3">
+                          <p className="text-sm font-semibold text-[#c93d3d]">Upload error</p>
+                          <p className="mt-1 text-sm text-[#e08080]">{uploadError}</p>
+                        </div>
+                      )}
+
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <button type="button" onClick={() => void handleSubmitProof()} disabled={!proofFileName || isSubmitting}
+                        <button type="button" onClick={() => void handleSubmitProof()} disabled={!proofFile || isSubmitting}
                           className="rounded-xl bg-[#4794f1] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#327fe0] disabled:cursor-not-allowed disabled:opacity-50">
-                          {isSubmitting ? "Submitting..." : "Submit Payment Proof"}
+                          {isSubmitting ? "Uploading & Submitting..." : "Submit Payment Proof"}
                         </button>
                         {paymentSubmitted ? (
                           <button type="button" onClick={() => router.push("/library-owner/transactions")}

@@ -190,14 +190,32 @@ export default function ReaderBookDetailPage({
 
       let proofUrl: string | undefined;
 
-      // Convert proof image to base64 for storage
+      // Upload proof image to Supabase Storage
       if (proofFile && modalAction !== "free") {
-        proofUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(proofFile);
-        });
+        const supabase = getSupabaseBrowserClient();
+        if (!supabase) throw new Error("Could not connect to storage");
+
+        const fileExt = proofFile.name.split(".").pop() ?? "jpg";
+        const filePath = `payment-proofs/${userId}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("proofs")
+          .upload(filePath, proofFile, { upsert: true });
+
+        if (uploadError) {
+          // Fallback: use base64 if storage bucket not available
+          proofUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(proofFile);
+          });
+        } else {
+          const { data: urlData } = supabase.storage
+            .from("proofs")
+            .getPublicUrl(filePath);
+          proofUrl = urlData.publicUrl;
+        }
       }
 
       const amount = modalAction === "rent" ? rentPrice : modalAction === "buy" ? currentPrice : 0;
