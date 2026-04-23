@@ -5,6 +5,131 @@ import { useState } from "react";
 import { getReaderSettings, saveReaderSettings, type ReaderSettingsData } from "@/src/lib/readerAccountStorage";
 import { getSupabaseBrowserSSR } from "@/src/lib/supabaseBrowserSSR";
 
+function ChangeNameCard() {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleSave() {
+    if (!name.trim()) { setErrorMsg("Name cannot be empty."); setStatus("error"); return; }
+    setStatus("loading"); setErrorMsg("");
+    try {
+      const supabase = getSupabaseBrowserSSR();
+      if (!supabase) throw new Error("Connection error");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase.from("profiles").update({ full_name: name.trim() }).eq("id", user.id);
+      if (error) throw new Error(error.message);
+      setStatus("success");
+      setTimeout(() => { setOpen(false); setStatus("idle"); setName(""); }, 2000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="rounded-[1.5rem] border border-[#e8edf4] bg-white p-5 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[1rem] font-semibold text-[#202532]">Change name</div>
+          <div className="mt-1 text-sm text-[#728093]">Keep your reader identity current.</div>
+        </div>
+        {!open && (
+          <button type="button" onClick={() => { setOpen(true); setStatus("idle"); setErrorMsg(""); }}
+            className="rounded-full border border-[#dbe2ec] px-4 py-2 text-sm font-semibold text-[#596476] transition hover:bg-[#fbfcff]">
+            Edit
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="mt-4 grid gap-3">
+          {status === "success" ? (
+            <div className="rounded-[1rem] border border-[#d8f0d1] bg-[#f6fff3] px-4 py-3 text-sm font-medium text-[#3d7f2f]">✅ Name updated successfully!</div>
+          ) : (
+            <>
+              <input type="text" placeholder="New display name" value={name} onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-[1rem] border border-[#e8edf4] bg-white px-4 py-3 text-sm text-[#202532] outline-none placeholder:text-[#b3bcc9] focus:border-[#c5cfde]" />
+              {status === "error" && <div className="rounded-[1rem] border border-[#fecaca] bg-[#fff5f5] px-4 py-3 text-sm text-[#991b1b]">{errorMsg}</div>}
+              <div className="flex gap-3">
+                <button type="button" onClick={() => { setOpen(false); setStatus("idle"); setErrorMsg(""); setName(""); }}
+                  className="rounded-full border border-[#dbe2ec] bg-white px-5 py-2.5 text-sm font-semibold text-[#596476] transition hover:bg-[#fbfcff]">Cancel</button>
+                <button type="button" onClick={() => void handleSave()} disabled={status === "loading" || !name.trim()}
+                  className="rounded-full bg-[#202532] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#2e3645] disabled:opacity-50">
+                  {status === "loading" ? "Saving…" : "Save name"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChangeEmailCard() {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleSave() {
+    if (!email.trim()) { setErrorMsg("Email cannot be empty."); setStatus("error"); return; }
+    setStatus("loading"); setErrorMsg("");
+    try {
+      const supabase = getSupabaseBrowserSSR();
+      if (!supabase) throw new Error("Connection error");
+      const { error } = await supabase.auth.updateUser({ email: email.trim() });
+      if (error) throw new Error(error.message);
+      setStatus("success");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="rounded-[1.5rem] border border-[#e8edf4] bg-white p-5 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[1rem] font-semibold text-[#202532]">Change email</div>
+          <div className="mt-1 text-sm text-[#728093]">Update your email for access and notifications.</div>
+        </div>
+        {!open && (
+          <button type="button" onClick={() => { setOpen(true); setStatus("idle"); setErrorMsg(""); }}
+            className="rounded-full border border-[#dbe2ec] px-4 py-2 text-sm font-semibold text-[#596476] transition hover:bg-[#fbfcff]">
+            Update
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="mt-4 grid gap-3">
+          {status === "success" ? (
+            <div className="rounded-[1rem] border border-[#d8f0d1] bg-[#f6fff3] px-4 py-3 text-sm font-medium text-[#3d7f2f]">
+              ✅ Confirmation sent to <strong>{email}</strong>. Check your inbox to confirm the change.
+            </div>
+          ) : (
+            <>
+              <input type="email" placeholder="New email address" value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-[1rem] border border-[#e8edf4] bg-white px-4 py-3 text-sm text-[#202532] outline-none placeholder:text-[#b3bcc9] focus:border-[#c5cfde]" />
+              {status === "error" && <div className="rounded-[1rem] border border-[#fecaca] bg-[#fff5f5] px-4 py-3 text-sm text-[#991b1b]">{errorMsg}</div>}
+              <div className="flex gap-3">
+                <button type="button" onClick={() => { setOpen(false); setStatus("idle"); setErrorMsg(""); setEmail(""); }}
+                  className="rounded-full border border-[#dbe2ec] bg-white px-5 py-2.5 text-sm font-semibold text-[#596476] transition hover:bg-[#fbfcff]">Cancel</button>
+                <button type="button" onClick={() => void handleSave()} disabled={status === "loading" || !email.trim()}
+                  className="rounded-full bg-[#202532] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#2e3645] disabled:opacity-50">
+                  {status === "loading" ? "Sending…" : "Send confirmation"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PasswordSection() {
   const [open, setOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -168,8 +293,8 @@ export default function SettingsSection() {
         <div className="space-y-4">
           {activeTab === "account" ? (
             <>
-              <SettingCard title="Change name" body="Keep your reader identity current." action={<button type="button" className="rounded-full border border-[#dbe2ec] px-4 py-2 text-sm font-semibold text-[#596476]">Edit</button>} />
-              <SettingCard title="Change email" body="Update your email for access and notifications." action={<button type="button" className="rounded-full border border-[#dbe2ec] px-4 py-2 text-sm font-semibold text-[#596476]">Update</button>} />
+              <ChangeNameCard />
+              <ChangeEmailCard />
               <PasswordSection />
             </>
           ) : null}
