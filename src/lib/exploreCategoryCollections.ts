@@ -217,7 +217,7 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   },
   {
     id: "sci-fi",
-    title: "វិទ្យាសាស្ត្រ​ប្រឌិត",
+    title: "វិទ្យាសាស្ត្រប្រឌិត",
     subtitle: "រឿងប្រឌិតផ្អែកលើវិទ្យាសាស្ត្រ និងបច្ចេកវិទ្យា។",
     color: "from-[#1d2bca] to-[#10196f]",
     heroBookId: "khmer-4",
