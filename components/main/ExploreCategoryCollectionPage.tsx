@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { ReaderBookDetail } from "@/src/lib/readerBookDetails";
 import {
-  getExploreCategoryBooks,
   type ExploreCategoryCollection,
   type ExploreOption,
 } from "@/src/lib/exploreCategoryCollections";
@@ -81,11 +80,13 @@ function ShelfRow({
 export default function ExploreCategoryCollectionPage({
   category,
   option,
+  dbBooks = [],
 }: {
   category: ExploreCategoryCollection;
   option: ExploreOption;
+  dbBooks?: ReaderBookDetail[];
 }) {
-  const books = useMemo(() => getExploreCategoryBooks(category), [category]);
+  const books = dbBooks;
   const [imageIndex, setImageIndex] = useState(0);
 
   const popularBooks = books.slice(0, 4);
@@ -205,9 +206,21 @@ export default function ExploreCategoryCollectionPage({
           </div>
         </section>
 
-        <ShelfRow title={`Popular in ${category.title}`} books={popularBooks} />
-        <ShelfRow title={`Readers also choose in ${category.title}`} books={readerPicks} />
-        <ShelfRow title={`More ${category.title}`} books={moreInCategory} />
+        {books.length === 0 ? (
+          <div className="rounded-[2rem] border border-dashed border-[#d4dae4] bg-white px-8 py-16 text-center">
+            <p className="text-2xl font-semibold text-[#202532]">No books yet</p>
+            <p className="mt-3 text-[#7a8597]">
+              No published books in <strong>{category.title}</strong> yet.
+              Admins can add books by selecting this category when creating a book.
+            </p>
+          </div>
+        ) : (
+          <>
+            <ShelfRow title={`Popular in ${category.title}`} books={popularBooks} />
+            <ShelfRow title={`Readers also choose in ${category.title}`} books={readerPicks} />
+            <ShelfRow title={`More ${category.title}`} books={moreInCategory} />
+          </>
+        )}
       </div>
     </main>
   );
