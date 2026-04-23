@@ -152,7 +152,6 @@ export default function BookRecordForm({
   useEffect(() => {
     if (mode === "create") setCategory("");
   }, [libraryType, mode]);
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
