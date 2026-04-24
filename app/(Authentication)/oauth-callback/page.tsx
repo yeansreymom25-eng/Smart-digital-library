@@ -99,30 +99,53 @@ export default function OAuthCallbackPage() {
       }, 500);
     }
 
-    function completeSignIn(user: User | null | undefined) {
-      // Create profile row for new OAuth users
-      if (user && isFreshOAuthSignup(user)) {
-        const supabaseClient = getSupabaseBrowserSSR();
-        if (supabaseClient) {
-          const fullName = (user.user_metadata?.full_name as string)
-            ?? (user.user_metadata?.name as string)
-            ?? "";
-          const avatarUrl = (user.user_metadata?.avatar_url as string)
-            ?? (user.user_metadata?.picture as string)
-            ?? "";
-
-          void supabaseClient.from("profiles").upsert({
-            id: user.id,
-            full_name: fullName,
-            avatar_url: avatarUrl,
-            role: "user",
-          }, { onConflict: "id" });
-        }
+    async function completeSignIn(user: User | null | undefined) {
+      if (!user) {
+        router.replace(AUTH_ROUTES.login);
+        return;
       }
 
-      const nextRoute = resolvePostOAuthRoute(user);
+      const supabaseClient = getSupabaseBrowserSSR();
+
+      // Create profile for new OAuth users
+      if (supabaseClient && isFreshOAuthSignup(user)) {
+        const fullName = (user.user_metadata?.full_name as string)
+          ?? (user.user_metadata?.name as string)
+          ?? "";
+        const avatarUrl = (user.user_metadata?.avatar_url as string)
+          ?? (user.user_metadata?.picture as string)
+          ?? "";
+
+        await supabaseClient.from("profiles").upsert({
+          id: user.id,
+          full_name: fullName,
+          avatar_url: avatarUrl,
+          role: "user",
+        }, { onConflict: "id" });
+      }
+
+      // Check role and redirect accordingly
+      if (supabaseClient) {
+        const { data: profile } = await supabaseClient
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        const role = profile?.role as string | undefined;
+
+        clearSocialAuthIntent();
+
+        if (role === "admin" || role === "super_admin") {
+          router.replace("/library-owner/dashboard");
+        } else {
+          router.replace(AUTH_ROUTES.dashboard); // /home
+        }
+        return;
+      }
+
       clearSocialAuthIntent();
-      router.replace(nextRoute);
+      router.replace(AUTH_ROUTES.dashboard);
     }
 
     const { data: authListener } = client.auth.onAuthStateChange((_event, session) => {
@@ -130,7 +153,7 @@ export default function OAuthCallbackPage() {
         return;
       }
 
-      completeSignIn(session.user);
+      void completeSignIn(session.user);
     });
 
     async function finishOAuth() {
@@ -159,7 +182,7 @@ export default function OAuthCallbackPage() {
         }
 
         const user = exchange.data.session?.user;
-        completeSignIn(user);
+        void completeSignIn(user);
         return;
       }
 
@@ -176,7 +199,7 @@ export default function OAuthCallbackPage() {
           return;
         }
 
-        completeSignIn(sessionResult.data.user ?? sessionResult.data.session?.user);
+        void completeSignIn(sessionResult.data.user ?? sessionResult.data.session?.user);
         return;
       }
 
@@ -191,7 +214,7 @@ export default function OAuthCallbackPage() {
       }
 
       if (data.session) {
-        completeSignIn(data.session.user);
+        void completeSignIn(data.session.user);
         return;
       }
 
@@ -204,7 +227,7 @@ export default function OAuthCallbackPage() {
         }
 
         if (retry.data.session) {
-          completeSignIn(retry.data.session.user);
+          void completeSignIn(retry.data.session.user);
           return;
         }
 
