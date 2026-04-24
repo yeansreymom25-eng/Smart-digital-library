@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
 // UI components
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import SocialIcon from "@/components/auth/Socialicon";
 import AuthStudentIllustration from "@/components/auth/AuthStudentIllustration";
 import AuthRoleSwitch from "@/components/auth/AuthRoleSwitch";
 import { AUTH_ROUTES, storePendingSignup } from "@/src/lib/authFlow";
