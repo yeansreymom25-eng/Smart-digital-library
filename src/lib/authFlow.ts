@@ -4,11 +4,11 @@ export const AUTH_ROUTES = {
   login: "/Log_in",
   signup: "/Sign_up",
   updatePassword: "/Update_Password",
-  forgotPassword: "/Forgot_Password",
+  forgotPassword: "/OTP_Request",
   setNewPassword: "/Setnew_Password",
   otpVerify: "/otp-verify",
   oauthCallback: "/oauth-callback",
-  dashboard: "/dashboard",
+  dashboard: "/home",
 } as const;
 
 export const PENDING_SIGNUP_KEY = "pending-signup";

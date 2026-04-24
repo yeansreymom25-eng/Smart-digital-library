@@ -98,8 +98,8 @@ function buildPages(book: ReaderBookDetail): ReaderContentPage[] {
   return pages;
 }
 
-export function getReaderBookContent(id: string): ReaderBookContent | null {
-  const book = getReaderBookDetail(id);
+export async function getReaderBookContent(id: string): Promise<ReaderBookContent | null> {
+  const book = await getReaderBookDetail(id);
 
   if (!book) {
     return null;

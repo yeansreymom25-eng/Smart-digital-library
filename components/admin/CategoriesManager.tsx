@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import {
-  getCategoryStats,
-  readAdminCategories,
-  removeAdminCategory,
-  type AdminCategory,
-  type CategoryLibraryType,
-} from "@/src/lib/adminCategories";
+import { getCategoryStats, type AdminCategory, type CategoryLibraryType } from "@/src/lib/adminCategories";
+import { getSupabaseBrowserSSR } from "@/src/lib/supabaseBrowserSSR";
+
+const DEFAULT_ENGLISH_CATEGORIES = [
+  "Self-Help", "Fantasy", "Historical", "Sci-Fi", "Classics",
+  "Science", "Finance", "Mystery", "Philosophy", "Biography",
+  "Romance", "Travel", "Drama", "Cooking", "Horror",
+];
+
+const DEFAULT_KHMER_CATEGORIES = [
+  "ជំនួយខ្លួនឯង", "រឿងអស្ចារ្យ", "ប្រវត្តិសាស្ត្រ", "វិទ្យាសាស្ត្រប្រឌិត",
+  "អក្សរសិល្ប៍ក្លាស្សិក", "វិទ្យាសាស្ត្រ", "ហិរញ្ញវត្ថុ", "អាថ៌កំបាំង",
+  "ទស្សនវិជ្ជា", "ជីវប្រវត្តិ", "រឿងស្នេហា", "ទេសចរណ៍",
+  "រឿងនាដកម្ម", "ធ្វើម្ហូប", "រឿងភ័យខ្លាច",
+];
 
 function PencilIcon() {
   return (
@@ -33,41 +41,81 @@ function typeLabel(type: CategoryLibraryType) {
   return type === "khmer" ? "Khmer Books" : "English Books";
 }
 
-export default function CategoriesManager() {
-  const [categories, setCategories] = useState<AdminCategory[]>(() => readAdminCategories());
+export default function CategoriesManager({ initialCategories = [] }: { initialCategories?: AdminCategory[] }) {
+  const [categories, setCategories] = useState<AdminCategory[]>(initialCategories);
   const [selectedType, setSelectedType] = useState<CategoryLibraryType>("english");
   const [pendingDelete, setPendingDelete] = useState<AdminCategory | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedMsg, setSeedMsg] = useState("");
+
+  async function handleSeedDefaults() {
+    setIsSeeding(true);
+    setSeedMsg("");
+    try {
+      const supabase = getSupabaseBrowserSSR();
+      if (!supabase) throw new Error("Connection error");
+
+      const defaults = selectedType === "english" ? DEFAULT_ENGLISH_CATEGORIES : DEFAULT_KHMER_CATEGORIES;
+      const existingNames = new Set(categories.filter(c => c.libraryType === selectedType).map(c => c.name.toLowerCase()));
+      const toInsert = defaults.filter(n => !existingNames.has(n.toLowerCase()));
+
+      if (toInsert.length === 0) { setSeedMsg("All default categories already exist!"); setIsSeeding(false); return; }
+
+      const { data, error } = await supabase.from("categories").insert(
+        toInsert.map(name => ({ name, library_type: selectedType, description: "" }))
+      ).select();
+
+      if (error) throw new Error(error.message);
+
+      const newCats: AdminCategory[] = (data ?? []).map((row) => ({
+        id: row.id as string,
+        name: row.name as string,
+        description: "",
+        books: 0,
+        libraryType: selectedType,
+      }));
+
+      setCategories(prev => [...prev, ...newCats]);
+      setSeedMsg(`✅ Added ${newCats.length} default categories!`);
+      setTimeout(() => setSeedMsg(""), 3000);
+    } catch (err) {
+      setSeedMsg(err instanceof Error ? err.message : "Failed to seed categories.");
+    } finally {
+      setIsSeeding(false);
+    }
+  }
 
   const filteredCategories = useMemo(
-    () => categories.filter((category) => category.libraryType === selectedType),
+    () => categories.filter((c) => c.libraryType === selectedType),
     [categories, selectedType]
   );
 
-  const stats = useMemo(
-    () => getCategoryStats(filteredCategories),
-    [filteredCategories]
-  );
+  const stats = useMemo(() => getCategoryStats(filteredCategories), [filteredCategories]);
 
-  function handleDeleteConfirm() {
-    if (!pendingDelete) {
-      return;
+  async function handleDeleteConfirm() {
+    if (!pendingDelete) return;
+    setIsDeleting(true);
+
+    try {
+      const res = await fetch(`/api/admin/categories/${pendingDelete.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setCategories((prev) => prev.filter((c) => c.id !== pendingDelete.id));
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setIsDeleting(false);
+      setPendingDelete(null);
     }
-
-    const nextCategories = removeAdminCategory(pendingDelete.id);
-    setCategories(nextCategories);
-    setPendingDelete(null);
   }
 
   return (
     <section className="space-y-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <h1 className="text-[2.5rem] font-bold leading-none text-[#173b73]">
-            Categories
-          </h1>
-          <p className="mt-2 max-w-3xl text-base text-[#4d6691]">
-            Organize your book categories.
-          </p>
+          <h1 className="text-[2.5rem] font-bold leading-none text-[#173b73]">Categories</h1>
+          <p className="mt-2 max-w-3xl text-base text-[#4d6691]">Organize your book categories.</p>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -75,26 +123,27 @@ export default function CategoriesManager() {
             <button
               type="button"
               onClick={() => setSelectedType("english")}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedType === "english"
-                  ? "bg-[#1f2430] text-white"
-                  : "text-[#667081] hover:text-[#1f2430]"
-              }`}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${selectedType === "english" ? "bg-[#1f2430] text-white" : "text-[#667081] hover:text-[#1f2430]"}`}
             >
               English
             </button>
             <button
               type="button"
               onClick={() => setSelectedType("khmer")}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedType === "khmer"
-                  ? "bg-[#1f2430] text-white"
-                  : "text-[#667081] hover:text-[#1f2430]"
-              }`}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${selectedType === "khmer" ? "bg-[#1f2430] text-white" : "text-[#667081] hover:text-[#1f2430]"}`}
             >
               Khmer
             </button>
           </div>
+
+          <button
+              type="button"
+              onClick={() => void handleSeedDefaults()}
+              disabled={isSeeding}
+              className="rounded-[10px] border border-[#4d98f0] bg-white px-6 py-3 text-base font-semibold text-[#4d98f0] transition hover:bg-[#eef5ff] disabled:opacity-50"
+            >
+              {isSeeding ? "Adding…" : "⚡ Add Default Categories"}
+            </button>
 
           <Link
             href="/library-owner/categories/new"
@@ -105,6 +154,12 @@ export default function CategoriesManager() {
         </div>
       </div>
 
+      {seedMsg && (
+        <div className={`rounded-[10px] border px-4 py-3 text-sm font-medium ${seedMsg.startsWith("✅") ? "border-[#d8f0d1] bg-[#f6fff3] text-[#3d7f2f]" : "border-[#fecaca] bg-[#fff5f5] text-[#991b1b]"}`}>
+          {seedMsg}
+        </div>
+      )}
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {filteredCategories.map((category) => (
           <article
@@ -113,9 +168,7 @@ export default function CategoriesManager() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-[1.55rem] font-bold tracking-[-0.04em] text-[#173b73]">
-                  {category.name}
-                </h2>
+                <h2 className="text-[1.55rem] font-bold tracking-[-0.04em] text-[#173b73]">{category.name}</h2>
                 <p className="mt-2 text-sm text-[#6f83a7]">{typeLabel(category.libraryType)}</p>
               </div>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#6a82aa] shadow-[0_8px_16px_rgba(15,23,42,0.05)]">
@@ -148,37 +201,24 @@ export default function CategoriesManager() {
 
       {!filteredCategories.length ? (
         <section className="rounded-[12px] border border-dashed border-[#cfd6e2] bg-white px-6 py-10 text-center shadow-[0_8px_20px_rgba(132,145,165,0.05)]">
-          <p className="text-lg font-semibold text-[#173b73]">
-            No categories yet
-          </p>
+          <p className="text-lg font-semibold text-[#173b73]">No categories yet</p>
           <p className="mt-2 text-sm text-[#5d749a]">
-            Add your first {selectedType === "english" ? "English" : "Khmer"} category to start organizing books.
+            Add your first {selectedType === "english" ? "English" : "Khmer"} category.
           </p>
         </section>
       ) : null}
 
       <section className="rounded-[12px] border border-[#cfd6e2] bg-white p-5 shadow-[0_8px_20px_rgba(132,145,165,0.05)]">
-        <h2 className="text-xl font-semibold text-[#173b73]">
-          Category Statistics
-        </h2>
-
+        <h2 className="text-xl font-semibold text-[#173b73]">Category Statistics</h2>
         <div className="mt-6 space-y-4">
           {stats.map((stat) => (
             <div key={stat.id}>
               <div className="mb-2 flex items-center justify-between gap-4 text-sm">
                 <span className="font-medium text-[#1e3a6d]">{stat.name}</span>
-                <span className="text-[#7286a7]">
-                  {stat.books} books ({stat.percent}%)
-                </span>
+                <span className="text-[#7286a7]">{stat.books} books ({stat.percent}%)</span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-[#e5e7eb]">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${stat.percent}%`,
-                    backgroundColor: stat.tone,
-                  }}
-                />
+                <div className="h-full rounded-full" style={{ width: `${stat.percent}%`, backgroundColor: stat.tone }} />
               </div>
             </div>
           ))}
@@ -188,16 +228,11 @@ export default function CategoriesManager() {
       {pendingDelete ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6 backdrop-blur-[2px]">
           <div className="w-full max-w-md rounded-[22px] border border-[#ffd4d4] bg-white p-6 shadow-[0_30px_80px_rgba(15,23,42,0.24)]">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#c74a4a]">
-              Delete Category
-            </p>
-            <h2 className="mt-3 text-2xl font-bold text-[#8f2626]">
-              Are you sure?
-            </h2>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#c74a4a]">Delete Category</p>
+            <h2 className="mt-3 text-2xl font-bold text-[#8f2626]">Are you sure?</h2>
             <p className="mt-3 text-sm leading-6 text-[#6f5050]">
-              &quot;{pendingDelete.name}&quot; will be removed from your category list. This action cannot be undone.
+              &quot;{pendingDelete.name}&quot; will be permanently deleted.
             </p>
-
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -208,10 +243,11 @@ export default function CategoriesManager() {
               </button>
               <button
                 type="button"
-                onClick={handleDeleteConfirm}
-                className="rounded-xl bg-[#d94b4b] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#c93d3d]"
+                onClick={() => void handleDeleteConfirm()}
+                disabled={isDeleting}
+                className="rounded-xl bg-[#d94b4b] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#c93d3d] disabled:opacity-50"
               >
-                Delete Category
+                {isDeleting ? "Deleting..." : "Delete Category"}
               </button>
             </div>
           </div>

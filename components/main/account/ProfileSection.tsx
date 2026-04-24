@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { getReaderProfile, saveReaderProfile, type ReaderProfileData } from "@/src/lib/readerAccountStorage";
+import { useRouter } from "next/navigation";
+import type { ReaderProfileData } from "@/src/lib/readerAccountStorage";
 
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
@@ -45,9 +46,10 @@ async function fileToDataUrl(file: File) {
   });
 }
 
-export default function ProfileSection() {
-  const [profile, setProfile] = useState<ReaderProfileData>(() => getReaderProfile());
-  const [draft, setDraft] = useState<ReaderProfileData>(profile);
+export default function ProfileSection({ initialProfile, userId }: { initialProfile: ReaderProfileData; userId: string }) {
+  const router = useRouter();
+  const [profile, setProfile] = useState<ReaderProfileData>(initialProfile);
+  const [draft, setDraft] = useState<ReaderProfileData>(initialProfile);
   const [editing, setEditing] = useState(false);
 
   const initials = useMemo(() => {
@@ -68,10 +70,28 @@ export default function ProfileSection() {
     setDraft((current) => ({ ...current, avatarDataUrl }));
   }
 
-  function handleSave() {
-    setProfile(draft);
-    saveReaderProfile(draft);
-    setEditing(false);
+  async function handleSave() {
+    try {
+      await fetch("/api/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: draft.fullName,
+          avatarDataUrl: draft.avatarDataUrl,
+          phone: draft.phone,
+          gender: draft.gender,
+          dateOfBirth: draft.dateOfBirth,
+          country: draft.country,
+          bio: draft.bio,
+        }),
+      });
+      setProfile(draft);
+      setEditing(false);
+      router.refresh();
+    } catch {
+      setProfile(draft);
+      setEditing(false);
+    }
   }
 
   function handleCancel() {
@@ -163,15 +183,6 @@ export default function ProfileSection() {
               <ProfileRow label="Gender" value={profile.gender} />
               <ProfileRow label="Date of birth" value={profile.dateOfBirth} />
               <ProfileRow label="Country / location" value={profile.country} />
-              <div className="rounded-[1.4rem] border border-[#ebeff5] bg-white/90 px-4 py-4 shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:col-span-2">
-                <div className="text-[0.78rem] font-semibold uppercase tracking-[0.16em] text-[#97a0af]">Password</div>
-                <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-[1rem] font-medium text-[#253041]">{profile.passwordLabel}</div>
-                  <button type="button" className="rounded-full border border-[#dbe2ec] bg-white px-4 py-2 text-sm font-semibold text-[#596476] transition hover:bg-[#fbfcff]">
-                    Change password
-                  </button>
-                </div>
-              </div>
               <div className="rounded-[1.4rem] border border-[#ebeff5] bg-white/90 px-4 py-4 shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:col-span-2">
                 <div className="text-[0.78rem] font-semibold uppercase tracking-[0.16em] text-[#97a0af]">Reading preference / bio</div>
                 <p className="mt-2 text-[1rem] leading-7 text-[#677282]">{profile.bio || "No reading preference added yet."}</p>

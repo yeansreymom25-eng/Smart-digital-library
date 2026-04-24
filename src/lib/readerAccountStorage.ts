@@ -1,3 +1,5 @@
+import { createServerClient } from "@supabase/ssr";
+
 export type ReaderAccountSection = "profile" | "settings" | "transactions";
 
 export type ReaderProfileData = {
@@ -64,10 +66,6 @@ export type ReaderTransactionRecord = {
   proofFileName?: string;
 };
 
-const PROFILE_KEY = "reader-account-profile";
-const SETTINGS_KEY = "reader-account-settings";
-const TRANSACTIONS_KEY = "reader-account-transactions";
-
 export const defaultProfile: ReaderProfileData = {
   fullName: "Smart Reader",
   email: "reader@smartlibrary.app",
@@ -101,101 +99,116 @@ export const defaultSettings: ReaderSettingsData = {
   ],
 };
 
-export const defaultTransactions: ReaderTransactionRecord[] = [
-  {
-    id: "txn-1",
-    bookId: "life-impossible",
-    bookTitle: "The Life Impossible",
-    bookCover: "/MainPage/Books/9780399547003.jpeg",
-    amountPaid: 18,
-    originalPrice: 24,
-    action: "buy",
-    purchasedAt: "2026-04-02T10:30:00.000Z",
-    status: "Verified",
-    reference: "SDL-240402-1842",
-    method: "ABA QR",
-    proofImageUrl: "/User_Image/Library owner_image/QR.jpg",
-    proofFileName: "aba-proof-apr-02.jpg",
-  },
-  {
-    id: "txn-2",
-    bookId: "atomic-habits",
-    bookTitle: "Atomic Habits",
-    bookCover: "/MainPage/Books/Atomic_habits.jpg",
-    amountPaid: 0,
-    action: "free",
-    purchasedAt: "2026-04-01T08:15:00.000Z",
-    status: "Verified",
-    reference: "SDL-240401-9982",
-    method: "Free Access",
-  },
-  {
-    id: "txn-3",
-    bookId: "listen-for-the-lie",
-    bookTitle: "Listen for the Lie",
-    bookCover: "/MainPage/Books/listen-for-the-lie.jpeg",
-    amountPaid: 1.65,
-    originalPrice: 11,
-    action: "rent",
-    purchasedAt: "2026-03-28T17:20:00.000Z",
-    status: "Pending",
-    reference: "SDL-240328-6135",
-    method: "Bakong QR",
-  },
-];
-
-function readStorage<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") {
-    return fallback;
-  }
-
-  const raw = window.localStorage.getItem(key);
-  if (!raw) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
+function getClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  );
 }
 
-function writeStorage<T>(key: string, value: T) {
-  if (typeof window === "undefined") {
-    return;
-  }
+function rowToTransaction(row: Record<string, unknown>): ReaderTransactionRecord {
+  const type = (row.type as string) ?? "";
+  const action: ReaderTransactionRecord["action"] =
+    type === "Rent" ? "rent" : type === "Purchase" ? "buy" : "free";
 
-  window.localStorage.setItem(key, JSON.stringify(value));
+  const amountStr = (row.amount as string) ?? "$0.00";
+  const amountPaid = parseFloat(amountStr.replace(/[^0-9.]/g, "")) || 0;
+
+  const status = row.status as string;
+  const txStatus: ReaderTransactionStatus =
+    status === "Approved" ? "Verified" : status === "Rejected" ? "Rejected" : "Pending";
+
+  return {
+    id: row.id as string,
+    bookId: (row.book_id as string) ?? "",
+    bookTitle: "",
+    bookCover: "",
+    amountPaid,
+    action,
+    purchasedAt: (row.created_at as string) ?? new Date().toISOString(),
+    status: txStatus,
+    reference: (row.proof_url as string) ?? "",
+    method: amountPaid === 0 ? "Free Access" : "ABA QR",
+    proofImageUrl: (row.proof_url as string) ?? undefined,
+  };
 }
 
-export function getReaderProfile(): ReaderProfileData {
-  return readStorage(PROFILE_KEY, defaultProfile);
+export async function getReaderProfile(userId: string): Promise<ReaderProfileData> {
+  const supabase = getClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("full_name, avatar_url")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error || !data) return defaultProfile;
+
+  return {
+    ...defaultProfile,
+    fullName: (data.full_name as string) ?? defaultProfile.fullName,
+    avatarDataUrl: (data.avatar_url as string) ?? undefined,
+  };
 }
 
-export function saveReaderProfile(profile: ReaderProfileData) {
-  writeStorage(PROFILE_KEY, profile);
+export async function saveReaderProfile(userId: string, profile: ReaderProfileData): Promise<void> {
+  const supabase = getClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: profile.fullName,
+      avatar_url: profile.avatarDataUrl ?? null,
+    })
+    .eq("id", userId);
+
+  if (error) throw new Error(error.message);
 }
 
 export function getReaderSettings(): ReaderSettingsData {
-  return readStorage(SETTINGS_KEY, defaultSettings);
+  if (typeof window === "undefined") return defaultSettings;
+  const raw = window.localStorage.getItem("reader-account-settings");
+  if (!raw) return defaultSettings;
+  try {
+    return JSON.parse(raw) as ReaderSettingsData;
+  } catch {
+    return defaultSettings;
+  }
 }
 
-export function saveReaderSettings(settings: ReaderSettingsData) {
-  writeStorage(SETTINGS_KEY, settings);
+export function saveReaderSettings(settings: ReaderSettingsData): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem("reader-account-settings", JSON.stringify(settings));
 }
 
-export function getReaderTransactions(): ReaderTransactionRecord[] {
-  return readStorage(TRANSACTIONS_KEY, defaultTransactions);
+export async function getReaderTransactions(userId: string): Promise<ReaderTransactionRecord[]> {
+  const supabase = getClient();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => rowToTransaction(row as Record<string, unknown>));
 }
 
-export function saveReaderTransactions(transactions: ReaderTransactionRecord[]) {
-  writeStorage(TRANSACTIONS_KEY, transactions);
-}
+export async function appendReaderTransaction(
+  userId: string,
+  transaction: Omit<ReaderTransactionRecord, "id">
+): Promise<ReaderTransactionRecord[]> {
+  const supabase = getClient();
 
-export function appendReaderTransaction(transaction: ReaderTransactionRecord) {
-  const current = getReaderTransactions();
-  const next = [transaction, ...current.filter((item) => item.id !== transaction.id)];
-  saveReaderTransactions(next);
-  return next;
+  const typeMap = { buy: "Purchase", rent: "Rent", free: "Rent" } as const;
+
+  const { error } = await supabase.from("transactions").insert({
+    user_id: userId,
+    book_id: transaction.bookId,
+    type: typeMap[transaction.action],
+    amount: `$${transaction.amountPaid.toFixed(2)}`,
+    status: transaction.status === "Verified" ? "Approved" : transaction.status,
+    proof_url: transaction.proofImageUrl ?? transaction.reference ?? null,
+  });
+
+  if (error) throw new Error(error.message);
+  return getReaderTransactions(userId);
 }

@@ -1,6 +1,4 @@
-"use client";
-
-import { readStoredJson, writeStoredJson } from "@/src/lib/browserStorage";
+import { createServerClient } from "@supabase/ssr";
 import type { CategoryLibraryType } from "@/src/lib/adminCategories";
 
 export type AdminBook = {
@@ -19,142 +17,88 @@ export type AdminBook = {
   paymentQrImageSrc: string;
 };
 
-const ADMIN_BOOKS_STORAGE_KEY = "admin-books";
-
-const defaultAdminBooks: AdminBook[] = [
-  {
-    id: "the-arts-of-programming",
-    title: "The Arts of programming",
-    author: "Sarah Johnson",
-    category: "Self-Help",
-    libraryType: "english",
-    type: "Buy/Rent",
-    status: "Published",
-    price: "$12.00",
-    pdfName: "arts-of-programming.pdf",
-    coverName: "arts-of-programming.jpg",
-    coverImageSrc: "/MainPage/Books/Atomic_habits.jpg",
-    paymentQrName: "",
-    paymentQrImageSrc: "",
-  },
-  {
-    id: "digital-marketing",
-    title: "Digital Marketing",
-    author: "Vy seoul",
-    category: "Finance",
-    libraryType: "english",
-    type: "Free",
-    status: "Published",
-    price: "$0.00",
-    pdfName: "digital-marketing.pdf",
-    coverName: "digital-marketing.jpg",
-    coverImageSrc: "/MainPage/Books/12132023_Book_Cover-Lessons_in_Chemistry_152020.jpg.webp",
-    paymentQrName: "",
-    paymentQrImageSrc: "",
-  },
-  {
-    id: "the-science-of-mind",
-    title: "The Science if Mind",
-    author: "Mr.saravuth",
-    category: "Khmer Knowledge",
-    libraryType: "khmer",
-    type: "Buy/Rent",
-    status: "Draft",
-    price: "$8.00",
-    pdfName: "science-of-mind.pdf",
-    coverName: "science-of-mind.jpg",
-    coverImageSrc: "/MainPage/Books/9780399547003.jpeg",
-    paymentQrName: "",
-    paymentQrImageSrc: "",
-  },
-];
-
-function normalizeStoredBooks(value: AdminBook[] | null) {
-  if (!Array.isArray(value)) {
-    return defaultAdminBooks;
-  }
-
-  return value
-    .filter(
-      (item) =>
-        typeof item?.id === "string" &&
-        typeof item?.title === "string" &&
-        typeof item?.author === "string" &&
-        typeof item?.category === "string" &&
-        typeof item?.type === "string" &&
-        typeof item?.status === "string" &&
-        typeof item?.price === "string" &&
-        typeof item?.pdfName === "string" &&
-        typeof item?.coverName === "string"
-    )
-    .map((item) => ({
-      ...item,
-      libraryType: item.libraryType === "khmer" ? "khmer" : "english",
-      coverImageSrc:
-        typeof item.coverImageSrc === "string" && item.coverImageSrc
-          ? item.coverImageSrc
-          : item.coverName
-            ? `/MainPage/Books/${item.coverName}`
-            : "",
-      paymentQrName:
-        typeof item.paymentQrName === "string" ? item.paymentQrName : "",
-      paymentQrImageSrc:
-        typeof item.paymentQrImageSrc === "string"
-          ? item.paymentQrImageSrc
-          : "",
-    })) as AdminBook[];
-}
-
-function writeAdminBooks(books: AdminBook[]) {
-  writeStoredJson(ADMIN_BOOKS_STORAGE_KEY, books);
-}
-
-function slugifyBookTitle(title: string) {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-export function readAdminBooks() {
-  const stored = readStoredJson<AdminBook[]>(ADMIN_BOOKS_STORAGE_KEY);
-  const books = normalizeStoredBooks(stored);
-
-  if (!stored) {
-    writeAdminBooks(books);
-  }
-
-  return books;
-}
-
-export function createAdminBook(book: Omit<AdminBook, "id">) {
-  const books = readAdminBooks();
-  const baseSlug = slugifyBookTitle(book.title) || "book";
-  const uniqueId = books.some((item) => item.id === baseSlug)
-    ? `${baseSlug}-${crypto.randomUUID().slice(0, 8)}`
-    : baseSlug;
-  const nextBooks = [...books, { id: uniqueId, ...book }];
-
-  writeAdminBooks(nextBooks);
-
-  return nextBooks;
-}
-
-export function updateAdminBook(bookId: string, updates: Omit<AdminBook, "id">) {
-  const nextBooks = readAdminBooks().map((item) =>
-    item.id === bookId ? { ...item, ...updates } : item
+function getClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
   );
-
-  writeAdminBooks(nextBooks);
-
-  return nextBooks;
 }
 
-export function removeAdminBook(bookId: string) {
-  const nextBooks = readAdminBooks().filter((item) => item.id !== bookId);
+function rowToBook(row: Record<string, unknown>): AdminBook {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    author: row.author as string,
+    category: row.category as string,
+    libraryType: (row.library_type === "khmer" ? "khmer" : "english") as CategoryLibraryType,
+    type: row.type as string,
+    status: row.status as AdminBook["status"],
+    price: row.price as string,
+    pdfName: (row.pdf_url as string) ?? "",
+    coverName: (row.cover_url as string) ?? "",
+    coverImageSrc: (row.cover_url as string) ?? "",
+    paymentQrName: (row.payment_qr_url as string) ?? "",
+    paymentQrImageSrc: (row.payment_qr_url as string) ?? "",
+  };
+}
 
-  writeAdminBooks(nextBooks);
+export async function readAdminBooks(): Promise<AdminBook[]> {
+  const supabase = getClient();
+  const { data, error } = await supabase
+    .from("books")
+    .select("*")
+    .order("created_at", { ascending: false });
 
-  return nextBooks;
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => rowToBook(row as Record<string, unknown>));
+}
+
+export async function createAdminBook(book: Omit<AdminBook, "id">): Promise<AdminBook[]> {
+  const supabase = getClient();
+  const { error } = await supabase.from("books").insert({
+    title: book.title,
+    author: book.author,
+    category: book.category,
+    library_type: book.libraryType,
+    type: book.type,
+    status: book.status,
+    price: book.price,
+    pdf_url: book.pdfName,
+    cover_url: book.coverImageSrc || book.coverName,
+    payment_qr_url: book.paymentQrImageSrc || book.paymentQrName,
+  });
+
+  if (error) throw new Error(error.message);
+  return readAdminBooks();
+}
+
+export async function updateAdminBook(bookId: string, updates: Omit<AdminBook, "id">): Promise<AdminBook[]> {
+  const supabase = getClient();
+  const { error } = await supabase
+    .from("books")
+    .update({
+      title: updates.title,
+      author: updates.author,
+      category: updates.category,
+      library_type: updates.libraryType,
+      type: updates.type,
+      status: updates.status,
+      price: updates.price,
+      pdf_url: updates.pdfName,
+      cover_url: updates.coverImageSrc || updates.coverName,
+      payment_qr_url: updates.paymentQrImageSrc || updates.paymentQrName,
+    })
+    .eq("id", bookId);
+
+  if (error) throw new Error(error.message);
+  return readAdminBooks();
+}
+
+export async function removeAdminBook(bookId: string): Promise<AdminBook[]> {
+  const supabase = getClient();
+  const { error } = await supabase.from("books").delete().eq("id", bookId);
+
+  if (error) throw new Error(error.message);
+  return readAdminBooks();
 }

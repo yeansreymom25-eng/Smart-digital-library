@@ -1,6 +1,4 @@
-"use client";
-
-import { readStoredJson, writeStoredJson } from "@/src/lib/browserStorage";
+import { createServerClient } from "@supabase/ssr";
 
 export type AdminUser = {
   id: string;
@@ -11,86 +9,34 @@ export type AdminUser = {
   status: "Active" | "Inactive";
 };
 
-const ADMIN_USERS_STORAGE_KEY = "admin-users";
-
-const defaultAdminUsers: AdminUser[] = [
-  {
-    id: "bormey",
-    name: "Bormey",
-    email: "mey@gmail.com",
-    role: "User",
-    joinedDate: "1/15/2026",
-    status: "Active",
-  },
-  {
-    id: "thyroth",
-    name: "Thyroth",
-    email: "roth2@gmail.com",
-    role: "User",
-    joinedDate: "2/10/2026",
-    status: "Active",
-  },
-  {
-    id: "lina",
-    name: "Lina",
-    email: "nana@gmail.com",
-    role: "User",
-    joinedDate: "5/15/2026",
-    status: "Active",
-  },
-  {
-    id: "seav-mean",
-    name: "Seav Mean",
-    email: "mean123@gmail.com",
-    role: "User",
-    joinedDate: "1/15/2026",
-    status: "Active",
-  },
-  {
-    id: "devith",
-    name: "Devith",
-    email: "vith@gmail.com",
-    role: "User",
-    joinedDate: "1/15/2026",
-    status: "Active",
-  },
-  {
-    id: "kim-srun",
-    name: "Kim Srun",
-    email: "srun33@gmail.com",
-    role: "User",
-    joinedDate: "1/15/2026",
-    status: "Active",
-  },
-];
-
-function normalizeStoredUsers(value: AdminUser[] | null) {
-  if (!Array.isArray(value)) {
-    return defaultAdminUsers;
-  }
-
-  return value.filter(
-    (item) =>
-      typeof item?.id === "string" &&
-      typeof item?.name === "string" &&
-      typeof item?.email === "string" &&
-      (item?.role === "User" || item?.role === "Admin") &&
-      typeof item?.joinedDate === "string" &&
-      (item?.status === "Active" || item?.status === "Inactive")
-  ) as AdminUser[];
+function getClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  );
 }
 
-function writeAdminUsers(users: AdminUser[]) {
-  writeStoredJson(ADMIN_USERS_STORAGE_KEY, users);
+function rowToUser(row: Record<string, unknown>): AdminUser {
+  return {
+    id: row.id as string,
+    name: (row.full_name as string) ?? "",
+    email: (row.email as string) ?? "",
+    role: row.role === "Admin" ? "Admin" : "User",
+    joinedDate: row.created_at
+      ? new Date(row.created_at as string).toLocaleDateString("en-US")
+      : "",
+    status: "Active",
+  };
 }
 
-export function readAdminUsers() {
-  const stored = readStoredJson<AdminUser[]>(ADMIN_USERS_STORAGE_KEY);
-  const users = normalizeStoredUsers(stored);
+export async function readAdminUsers(): Promise<AdminUser[]> {
+  const supabase = getClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, role, created_at")
+    .order("created_at", { ascending: false });
 
-  if (!stored) {
-    writeAdminUsers(users);
-  }
-
-  return users;
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => rowToUser(row as Record<string, unknown>));
 }

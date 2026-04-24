@@ -5,12 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import DropdownAccountPanel from "@/components/main/account/DropdownAccountPanel";
+import { useReaderUser } from "@/src/hooks/useReaderUser";
 
 const primaryLinks = [
   { href: "/home", label: "Home" },
   { href: "/explore", label: "Explore" },
   { href: "/my-library", label: "My Library" },
-  { href: "/discount", label: "Discount" },
 ];
 
 function SearchIcon() {
@@ -61,54 +61,34 @@ export default function ReaderMainNavigation() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [navVisible, setNavVisible] = useState(true);
   const lastScrollYRef = useRef(0);
+  const user = useReaderUser();
 
   useEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
     document.body.style.overflow = menuOpen ? "hidden" : "";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [menuOpen]);
 
   useEffect(() => {
-    function handleKeydown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setMenuOpen(false);
-      }
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
     }
-
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
   }, []);
 
   useEffect(() => {
     function handleScroll() {
-      const currentScrollY = window.scrollY;
-      const previousScrollY = lastScrollYRef.current;
-
-      if (currentScrollY < 24) {
-        setNavVisible(true);
-        lastScrollYRef.current = currentScrollY;
-        return;
-      }
-
-      if (currentScrollY > previousScrollY + 6) {
-        setNavVisible(false);
-      } else if (currentScrollY < previousScrollY - 6) {
-        setNavVisible(true);
-      }
-
-      lastScrollYRef.current = currentScrollY;
+      const cur = window.scrollY;
+      const prev = lastScrollYRef.current;
+      if (cur < 24) { setNavVisible(true); lastScrollYRef.current = cur; return; }
+      if (cur > prev + 6) setNavVisible(false);
+      else if (cur < prev - 6) setNavVisible(true);
+      lastScrollYRef.current = cur;
     }
-
     lastScrollYRef.current = window.scrollY;
     window.addEventListener("scroll", handleScroll, { passive: true });
-
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -116,9 +96,7 @@ export default function ReaderMainNavigation() {
     <>
       <header
         className={`pointer-events-none fixed inset-x-0 top-0 z-40 px-4 pt-5 transition-all duration-300 sm:px-6 lg:px-8 ${
-          menuOpen || navVisible
-            ? "translate-y-0 opacity-100"
-            : "-translate-y-[120%] opacity-0"
+          menuOpen || navVisible ? "translate-y-0 opacity-100" : "-translate-y-[120%] opacity-0"
         }`}
       >
         <div className="pointer-events-auto mx-auto flex w-full max-w-[96rem] items-center gap-4">
@@ -154,19 +132,27 @@ export default function ReaderMainNavigation() {
             </div>
           </div>
 
+          {/* Avatar button */}
           <button
             type="button"
-            onClick={() => setMenuOpen((current) => !current)}
+            onClick={() => setMenuOpen((v) => !v)}
             aria-label="Open account menu"
-            className="flex h-[4.1rem] w-[4.1rem] items-center justify-center rounded-full border border-white/70 bg-white/78 text-black shadow-[0_16px_28px_rgba(15,23,42,0.16)] transition hover:scale-[1.02]"
+            className="flex h-[4.1rem] w-[4.1rem] items-center justify-center overflow-hidden rounded-full border border-white/70 bg-white/78 text-black shadow-[0_16px_28px_rgba(15,23,42,0.16)] transition hover:scale-[1.02]"
           >
-            <ProfileIcon />
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
+            ) : user.initials ? (
+              <span className="text-sm font-bold text-[#3b4350]">{user.initials}</span>
+            ) : (
+              <ProfileIcon />
+            )}
           </button>
         </div>
       </header>
 
-      {menuOpen ? (
-        <div className="fixed inset-0 z-50 opacity-100 transition-opacity duration-300">
+      {menuOpen && (
+        <div className="fixed inset-0 z-50">
           <button
             type="button"
             aria-label="Close account menu"
@@ -176,35 +162,33 @@ export default function ReaderMainNavigation() {
 
           <div className="absolute inset-x-0 top-0 px-4 pt-24 sm:px-6 lg:px-8">
             <div className="mx-auto flex w-full max-w-[96rem] justify-end">
-              <div className="w-full max-w-[24.5rem] rounded-[2.2rem] border border-white/85 bg-white/93 p-6 shadow-[0_26px_50px_rgba(15,23,42,0.18)] backdrop-blur-[12px] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] translate-y-0 scale-100 opacity-100">
+              <div className="w-full max-w-[24.5rem] rounded-[2.2rem] border border-white/85 bg-white/93 p-6 shadow-[0_26px_50px_rgba(15,23,42,0.18)] backdrop-blur-[12px]">
                 <p className="text-[0.9rem] font-medium tracking-[0.01em] text-[#818a99]">Account</p>
 
                 <div className="mt-4 flex items-center gap-3.5">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-[0_10px_20px_rgba(15,23,42,0.08)]">
-                    <ProfileIcon />
+                  {/* Avatar in dropdown */}
+                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-[#f1f4f8] shadow-[0_10px_20px_rgba(15,23,42,0.08)]">
+                    {user.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-lg font-bold text-[#3b4350]">{user.initials}</span>
+                    )}
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[1.15rem] font-semibold tracking-[-0.03em] text-[#1e2430]">
-                      Smart Reader
+                      {user.fullName || "Loading…"}
                     </p>
-                    <p className="truncate text-sm text-[#657083]">reader@smartlibrary.app</p>
+                    <p className="truncate text-sm text-[#657083]">{user.email}</p>
                   </div>
                 </div>
 
                 <DropdownAccountPanel onNavigate={() => setMenuOpen(false)} />
-
-                <Link
-                  href="/Log_in"
-                  onClick={() => setMenuOpen(false)}
-                  className="mt-5 flex w-full items-center justify-center rounded-full bg-black px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#1f2430]"
-                >
-                  Log out
-                </Link>
               </div>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
     </>
   );
 }
