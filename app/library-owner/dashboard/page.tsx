@@ -12,99 +12,121 @@ async function getDashboardStats() {
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
   );
 
-  // Run all queries in parallel for speed
-  const [
-    { count: totalUsers },
-    { count: totalBooks },
-    { data: revenueRows },
-    { count: pendingPayments },
-    { count: activeRentals },
-    { count: totalPurchases },
-    { count: publishedBooks },
-    { data: recentTxRows },
-  ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("books").select("*", { count: "exact", head: true }),
-    supabase
-      .from("transactions")
-      .select("amount")
-      .eq("status", "Approved")
-      .neq("type", "Free"),
-    supabase
-      .from("transactions")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "Pending"),
-    supabase
-      .from("reader_library")
-      .select("*", { count: "exact", head: true })
-      .eq("access_type", "rent")
-      .gt("expires_at", new Date().toISOString()),
-    supabase
-      .from("transactions")
-      .select("*", { count: "exact", head: true })
-      .eq("type", "Purchase")
-      .eq("status", "Approved"),
-    supabase
-      .from("books")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "Published"),
-    // Recent transactions with user + book names resolved separately
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      totalUsers: 0,
+      totalBooks: 0,
+      totalRevenue: 0,
+      pendingPayments: 0,
+      activeRentals: 0,
+      totalPurchases: 0,
+      publishedBooks: 0,
+      recentTransactions: [],
+    };
+  }
+
+  const { data: ownedBooks } = await supabase
+    .from("books")
+    .select("id, title, status")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false });
+
+  const ownerBooks = (ownedBooks ?? []) as Array<Record<string, unknown>>;
+  const ownedBookIds = ownerBooks.map((book) => book.id as string);
+
+  if (ownedBookIds.length === 0) {
+    return {
+      totalUsers: 0,
+      totalBooks: 0,
+      totalRevenue: 0,
+      pendingPayments: 0,
+      activeRentals: 0,
+      totalPurchases: 0,
+      publishedBooks: 0,
+      recentTransactions: [],
+    };
+  }
+
+  const bookTitleMap = new Map<string, string>(
+    ownerBooks.map((book) => [book.id as string, (book.title as string) ?? "Unknown"])
+  );
+
+  const [{ data: transactionRows }, { count: activeRentals }] = await Promise.all([
     supabase
       .from("transactions")
       .select("id, user_id, book_id, type, amount, status, created_at")
-      .order("created_at", { ascending: false })
-      .limit(6),
+      .in("book_id", ownedBookIds)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("reader_library")
+      .select("*", { count: "exact", head: true })
+      .in("book_id", ownedBookIds)
+      .eq("access_type", "rent")
+      .gt("expires_at", new Date().toISOString()),
   ]);
 
-  // Sum revenue
-  const totalRevenue = (revenueRows ?? []).reduce(
-    (sum, row) => sum + (Number(row.amount) || 0),
-    0
+  const ownerTransactions = (transactionRows ?? []) as Array<Record<string, unknown>>;
+  const totalRevenue = ownerTransactions.reduce((sum, row) => {
+    if (row.status !== "Approved" || row.type === "Free") return sum;
+    return sum + (Number(row.amount) || 0);
+  }, 0);
+
+  const totalUsers = new Set(
+    ownerTransactions.map((row) => row.user_id as string).filter(Boolean)
+  ).size;
+  const pendingPayments = ownerTransactions.filter((row) => row.status === "Pending").length;
+  const totalPurchases = ownerTransactions.filter(
+    (row) => row.type === "Purchase" && row.status === "Approved"
+  ).length;
+  const publishedBooks = ownerBooks.filter((book) => book.status === "Published").length;
+
+  const recentRows = ownerTransactions.slice(0, 6);
+  const recentUserIds = Array.from(
+    new Set(recentRows.map((row) => row.user_id as string).filter(Boolean))
+  );
+  const { data: profiles } = recentUserIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", recentUserIds)
+    : { data: [] };
+
+  const profileMap = new Map<string, string>(
+    ((profiles ?? []) as Array<Record<string, unknown>>).map((profile) => [
+      profile.id as string,
+      (profile.full_name as string) ?? "Unknown",
+    ])
   );
 
-  // Resolve user + book names for recent transactions
-  const recentTransactions = await Promise.all(
-    (recentTxRows ?? []).map(async (row) => {
-      const [{ data: profile }, { data: book }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", row.user_id)
-          .maybeSingle(),
-        supabase
-          .from("books")
-          .select("title")
-          .eq("id", row.book_id)
-          .maybeSingle(),
-      ]);
-
-      return {
-        id: row.id as string,
-        user: (profile?.full_name as string) ?? "Unknown",
-        book: (book?.title as string) ?? "Unknown",
-        type: row.type as string,
-        amount:
-          typeof row.amount === "number"
-            ? `$${Number(row.amount).toFixed(2)}`
-            : row.amount === 0 || row.amount === "0"
-            ? "Free"
-            : String(row.amount ?? "-"),
-        date: row.created_at
-          ? new Date(row.created_at as string).toLocaleDateString("en-US")
-          : "-",
-        status: (row.status as string).toLowerCase(),
-      };
-    })
-  );
+  const recentTransactions = recentRows.map((row) => ({
+    id: row.id as string,
+    user: profileMap.get(row.user_id as string) ?? "Unknown",
+    book: bookTitleMap.get(row.book_id as string) ?? "Unknown",
+    type: row.type as string,
+    amount:
+      typeof row.amount === "number"
+        ? `$${Number(row.amount).toFixed(2)}`
+        : row.amount === 0 || row.amount === "0"
+        ? "Free"
+        : String(row.amount ?? "-"),
+    date: row.created_at
+      ? new Date(row.created_at as string).toLocaleDateString("en-US")
+      : "-",
+    status: (row.status as string).toLowerCase(),
+  }));
 
   return {
-    totalUsers: totalUsers ?? 0,
-    totalBooks: totalBooks ?? 0,
+    totalUsers,
+    totalBooks: ownerBooks.length,
     totalRevenue,
     pendingPayments: pendingPayments ?? 0,
     activeRentals: activeRentals ?? 0,
-    totalPurchases: totalPurchases ?? 0,
-    publishedBooks: publishedBooks ?? 0,
+    totalPurchases,
+    publishedBooks,
     recentTransactions,
   };
 }

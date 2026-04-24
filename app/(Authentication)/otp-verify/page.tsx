@@ -13,7 +13,7 @@ import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
 // Helper to get redirect destination based on role
 function getRoleDestination(role: string | undefined): string {
   if (role === "super_admin") return "/super-admin/dashboard";
-  if (role === "admin") return "/library-owner/dashboard";
+  if (role === "admin") return "/library-owner/subscription";
   return "/home";
 }
 
@@ -146,15 +146,8 @@ function OTPVerifyInner() {
       return;
     }
 
-    // Get fresh role from session
-    const supabaseClient2 = getSupabaseBrowserClient();
-    if (supabaseClient2) {
-      const { data: sessionData2 } = await supabaseClient2.auth.getSession();
-      const role2 = sessionData2.session?.user?.user_metadata?.role as string | undefined;
-      router.push(getRoleDestination(role2));
-    } else {
-      router.push("/home");
-    }
+    const destination = getRoleDestination(result.role);
+    router.push(destination);
   }
 
   async function handleResend() {

@@ -8,7 +8,6 @@ import type { ReactNode } from "react";
 type LibraryBook = {
   id: string;
   bookId: string;
-  slug: string;
   title: string;
   author: string;
   imageSrc: string;
@@ -21,10 +20,6 @@ function daysLeft(expiresAt: string) {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
-function titleToSlug(title: string) {
-  return title.toLowerCase().replace(/\s+/g, "-");
-}
-
 function BookCover({
   book,
   widthClass = "w-[8.5rem] sm:w-[9rem]",
@@ -34,7 +29,7 @@ function BookCover({
 }) {
   return (
     <Link
-      href={`/book/${book.slug}/read`}
+      href={`/book/${book.bookId}/read`}
       className={`relative block aspect-[2/3] overflow-hidden rounded-[0.45rem] border border-black/5 shadow-[0_14px_28px_rgba(15,23,42,0.1)] ${widthClass}`}
     >
       {book.imageSrc ? (
@@ -142,7 +137,6 @@ export default async function MyLibraryPage() {
       return {
         id: row.id as string,
         bookId: row.book_id as string,
-        slug: book ? titleToSlug(book.title) : "",
         title: book?.title ?? "Unknown",
         author: book?.author ?? "Unknown",
         imageSrc: book?.cover_url ?? "",

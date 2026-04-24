@@ -1,12 +1,11 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import { readAdminBooks, type AdminBook } from "@/src/lib/adminBooks";
 
-export default function BookDetailsPanel({ bookId }: { bookId: string }) {
+export default async function BookDetailsPanel({ bookId }: { bookId: string }) {
+  const books = await readAdminBooks();
   const book: AdminBook | null =
-    readAdminBooks().find((item) => item.id === bookId) ?? null;
+    books.find((item: AdminBook) => item.id === bookId) ?? null;
 
   if (!book) {
     return (

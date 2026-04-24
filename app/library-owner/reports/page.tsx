@@ -10,43 +10,85 @@ export default async function AdminReportsPage() {
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
   );
 
-  const [
-    { count: totalUsers },
-    { count: totalBooks },
-    { count: totalTransactions },
-    { count: approvedTransactions },
-    { count: pendingTransactions },
-    { count: publishedBooks },
-    { data: revenueRows },
-    { count: rentals },
-    { count: purchases },
-  ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("books").select("*", { count: "exact", head: true }),
-    supabase.from("transactions").select("*", { count: "exact", head: true }),
-    supabase.from("transactions").select("*", { count: "exact", head: true }).eq("status", "Approved"),
-    supabase.from("transactions").select("*", { count: "exact", head: true }).eq("status", "Pending"),
-    supabase.from("books").select("*", { count: "exact", head: true }).eq("status", "Published"),
-    supabase.from("transactions").select("amount").eq("status", "Approved"),
-    supabase.from("transactions").select("*", { count: "exact", head: true }).eq("type", "Rent").eq("status", "Approved"),
-    supabase.from("transactions").select("*", { count: "exact", head: true }).eq("type", "Purchase").eq("status", "Approved"),
-  ]);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const totalRevenue = (revenueRows ?? []).reduce(
-    (sum, row) => sum + (Number(row.amount) || 0), 0
-  );
+  if (!user) {
+    return (
+      <ReportsManager
+        totalRevenue={0}
+        totalUsers={0}
+        totalBooks={0}
+        totalTransactions={0}
+        approvedTransactions={0}
+        pendingTransactions={0}
+        publishedBooks={0}
+        rentals={0}
+        purchases={0}
+      />
+    );
+  }
+
+  const { data: ownedBooks } = await supabase
+    .from("books")
+    .select("id, status")
+    .eq("owner_id", user.id);
+
+  const ownerBookRows = (ownedBooks ?? []) as Array<Record<string, unknown>>;
+  const ownedBookIds = ownerBookRows.map((book) => book.id as string);
+
+  if (ownedBookIds.length === 0) {
+    return (
+      <ReportsManager
+        totalRevenue={0}
+        totalUsers={0}
+        totalBooks={0}
+        totalTransactions={0}
+        approvedTransactions={0}
+        pendingTransactions={0}
+        publishedBooks={0}
+        rentals={0}
+        purchases={0}
+      />
+    );
+  }
+
+  const { data: transactionRows } = await supabase
+    .from("transactions")
+    .select("user_id, type, amount, status, book_id")
+    .in("book_id", ownedBookIds);
+
+  const ownerTransactions = (transactionRows ?? []) as Array<Record<string, unknown>>;
+  const totalUsers = new Set(
+    ownerTransactions.map((row) => row.user_id as string).filter(Boolean)
+  ).size;
+  const totalTransactions = ownerTransactions.length;
+  const approvedTransactions = ownerTransactions.filter((row) => row.status === "Approved").length;
+  const pendingTransactions = ownerTransactions.filter((row) => row.status === "Pending").length;
+  const rentals = ownerTransactions.filter(
+    (row) => row.type === "Rent" && row.status === "Approved"
+  ).length;
+  const purchases = ownerTransactions.filter(
+    (row) => row.type === "Purchase" && row.status === "Approved"
+  ).length;
+  const totalRevenue = ownerTransactions.reduce((sum, row) => {
+    if (row.status !== "Approved") return sum;
+    return sum + (Number(row.amount) || 0);
+  }, 0);
+  const publishedBooks = ownerBookRows.filter((book) => book.status === "Published").length;
 
   return (
     <ReportsManager
       totalRevenue={totalRevenue}
-      totalUsers={totalUsers ?? 0}
-      totalBooks={totalBooks ?? 0}
-      totalTransactions={totalTransactions ?? 0}
-      approvedTransactions={approvedTransactions ?? 0}
-      pendingTransactions={pendingTransactions ?? 0}
-      publishedBooks={publishedBooks ?? 0}
-      rentals={rentals ?? 0}
-      purchases={purchases ?? 0}
+      totalUsers={totalUsers}
+      totalBooks={ownerBookRows.length}
+      totalTransactions={totalTransactions}
+      approvedTransactions={approvedTransactions}
+      pendingTransactions={pendingTransactions}
+      publishedBooks={publishedBooks}
+      rentals={rentals}
+      purchases={purchases}
     />
   );
 }

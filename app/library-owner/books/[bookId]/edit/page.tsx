@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { notFound } from "next/navigation";
 import BookRecordForm from "@/components/admin/BookRecordForm";
 import type { AdminBook } from "@/src/lib/adminBooks";
 import type { AdminCategory } from "@/src/lib/adminCategories";
@@ -18,10 +19,23 @@ export default async function EditBookPage({
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
   );
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const [{ data: bookRow }, { data: categoryRows }] = await Promise.all([
-    supabase.from("books").select("*").eq("id", bookId).single(),
+    supabase
+      .from("books")
+      .select("*")
+      .eq("id", bookId)
+      .eq("owner_id", user?.id ?? "")
+      .maybeSingle(),
     supabase.from("categories").select("*").order("name"),
   ]);
+
+  if (!bookRow) {
+    notFound();
+  }
 
   const initialBook: AdminBook | null = bookRow
     ? {

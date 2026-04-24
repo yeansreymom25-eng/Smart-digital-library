@@ -376,8 +376,10 @@ export function getExploreCategory(option: ExploreOption, categoryId: string) {
   return getExploreCategories(option).find((category) => category.id === categoryId);
 }
 
-export function getExploreCategoryBooks(category: ExploreCategoryCollection): ReaderBookDetail[] {
-  return category.bookIds
-    .map((id) => getReaderBookDetail(id))
-    .filter((book): book is ReaderBookDetail => Boolean(book));
+export async function getExploreCategoryBooks(category: ExploreCategoryCollection): Promise<ReaderBookDetail[]> {
+  const books = await Promise.all(
+    category.bookIds.map((id) => getReaderBookDetail(id))
+  );
+
+  return books.filter((book): book is ReaderBookDetail => Boolean(book));
 }

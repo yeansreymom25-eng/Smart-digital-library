@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const response = NextResponse.next();
@@ -22,9 +22,10 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // ─── Public routes ────────────────────────────────────────────────────────
   const isAuthPage =
     pathname.startsWith("/Log_in") ||
     pathname.startsWith("/Sign_up") ||
@@ -38,20 +39,17 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/") ||
     pathname === "/";
 
-  // ─── Not logged in → send to login ───────────────────────────────────────
   if (!user && !isAuthPage) {
     const res = NextResponse.redirect(new URL("/Log_in", request.url));
     res.headers.set("Cache-Control", "no-store");
     return res;
   }
 
-  // ─── Logged in ────────────────────────────────────────────────────────────
   if (user) {
     const role = user.user_metadata?.role as string | undefined;
     const isAdmin = role === "admin";
     const isSuperAdmin = role === "super_admin";
 
-    // Prevent going back to auth pages after login
     if (isAuthPage && pathname !== "/" && !pathname.startsWith("/api/") && !pathname.startsWith("/auth/")) {
       let dest = "/home";
       if (isSuperAdmin) dest = "/super-admin/dashboard";
@@ -61,17 +59,14 @@ export async function middleware(request: NextRequest) {
       return res;
     }
 
-    // Super admin trying to access wrong routes
     if (isSuperAdmin && !pathname.startsWith("/super-admin") && !pathname.startsWith("/api/")) {
       return NextResponse.redirect(new URL("/super-admin/dashboard", request.url));
     }
 
-    // Admin trying to access reader or super-admin routes
     if (isAdmin && (isReaderRoute(pathname) || pathname.startsWith("/super-admin"))) {
       return NextResponse.redirect(new URL("/library-owner/dashboard", request.url));
     }
 
-    // Reader trying to access admin or super-admin routes
     if (!isAdmin && !isSuperAdmin && (pathname.startsWith("/library-owner") || pathname.startsWith("/super-admin"))) {
       return NextResponse.redirect(new URL("/home", request.url));
     }

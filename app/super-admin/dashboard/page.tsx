@@ -24,7 +24,10 @@ export default async function SuperAdminDashboardPage() {
 
   // Get emails from auth
   const { data: authUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  const emailMap = new Map((authUsers?.users ?? []).map((u) => [u.id, u.email ?? ""]));
+  const emailEntries: Array<[string, string]> = (authUsers?.users ?? []).map(
+    (u) => [u.id, u.email ?? ""] as [string, string]
+  );
+  const emailMap = new Map<string, string>(emailEntries);
 
   const libraryOwners = (profiles ?? []).map((profile) => {
     const sub = (subscriptions ?? []).find((s) => s.user_id === profile.id);

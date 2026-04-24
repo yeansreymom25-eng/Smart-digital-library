@@ -16,6 +16,8 @@ export async function POST(request: NextRequest) {
 
     const cookieStore = await cookies();
 
+    const response = NextResponse.json({ success: true, role: "user" });
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -25,6 +27,7 @@ export async function POST(request: NextRequest) {
           setAll: (cookiesToSet) => {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
+              response.cookies.set(name, value, options);
             });
           },
         },
@@ -52,7 +55,13 @@ export async function POST(request: NextRequest) {
       role = (profile?.role as string) ?? "user";
     }
 
-    return NextResponse.json({ success: true, role });
+    const finalResponse = NextResponse.json({ success: true, role });
+
+    response.cookies.getAll().forEach(({ name, value, ...rest }) => {
+      finalResponse.cookies.set(name, value, rest);
+    });
+
+    return finalResponse;
   } catch {
     return NextResponse.json(
       { error: "Internal server error" },

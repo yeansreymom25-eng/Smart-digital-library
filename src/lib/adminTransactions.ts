@@ -26,6 +26,8 @@ function rowToTransaction(row: Record<string, unknown>): AdminTransaction {
     id: row.id as string,
     user: (row.user_id as string) ?? "",
     book: (row.book_id as string) ?? "",
+    userId: (row.user_id as string) ?? "",
+    bookId: (row.book_id as string) ?? "",
     type: row.type as AdminTransaction["type"],
     amount: (row.amount as string) ?? "$0.00",
     date: row.created_at
@@ -64,8 +66,8 @@ export async function updateAdminTransactionStatus(
 export async function createAdminTransaction(transaction: Omit<AdminTransaction, "id">): Promise<AdminTransaction[]> {
   const supabase = getClient();
   const { error } = await supabase.from("transactions").insert({
-    user_id: transaction.user,
-    book_id: transaction.book,
+    user_id: transaction.userId || transaction.user,
+    book_id: transaction.bookId || transaction.book,
     type: transaction.type,
     amount: transaction.amount,
     status: transaction.status,

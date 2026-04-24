@@ -68,7 +68,7 @@ export default function CategoriesManager({ initialCategories = [] }: { initialC
 
       if (error) throw new Error(error.message);
 
-      const newCats: AdminCategory[] = (data ?? []).map((row) => ({
+      const newCats: AdminCategory[] = (data ?? []).map((row: { id: string; name: string }) => ({
         id: row.id as string,
         name: row.name as string,
         description: "",

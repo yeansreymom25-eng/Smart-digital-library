@@ -12,10 +12,44 @@ export default async function AdminUsersPage() {
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
   );
 
-  // Fetch profiles + cross-reference auth.users for email via service role
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <UsersManager initialUsers={[]} />;
+  }
+
+  const { data: ownedBooks } = await supabase
+    .from("books")
+    .select("id")
+    .eq("owner_id", user.id);
+
+  const ownedBookIds = ((ownedBooks ?? []) as Array<Record<string, unknown>>).map(
+    (book) => book.id as string
+  );
+
+  if (ownedBookIds.length === 0) {
+    return <UsersManager initialUsers={[]} />;
+  }
+
+  const { data: ownerTransactions } = await supabase
+    .from("transactions")
+    .select("user_id")
+    .in("book_id", ownedBookIds);
+
+  const userIds = Array.from(
+    new Set(((ownerTransactions ?? []) as Array<Record<string, unknown>>).map((row) => row.user_id as string).filter(Boolean))
+  );
+
+  if (userIds.length === 0) {
+    return <UsersManager initialUsers={[]} />;
+  }
+
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, full_name, role, created_at")
+    .in("id", userIds)
     .order("created_at", { ascending: false });
 
   // Get emails from auth.users (requires service role)
@@ -23,8 +57,11 @@ export default async function AdminUsersPage() {
     perPage: 1000,
   });
 
-  const emailMap = new Map(
-    (authUsers?.users ?? []).map((u) => [u.id, u.email ?? ""])
+  const emailEntries: Array<[string, string]> = (authUsers?.users ?? []).map(
+    (u) => [u.id, u.email ?? ""] as [string, string]
+  );
+  const emailMap = new Map<string, string>(
+    emailEntries
   );
 
   const users: AdminUser[] = (profiles ?? []).map((row) => ({

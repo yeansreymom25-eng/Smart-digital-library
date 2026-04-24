@@ -40,6 +40,9 @@ export default function BookReader({
 
   // Use isUnlocked prop from server — no more localStorage
   const unlocked = isUnlocked || book.access === "free";
+  const hasPdf = typeof book.pdfUrl === "string" && book.pdfUrl.length > 0;
+  const showPdfReader = unlocked && hasPdf;
+  const pdfUrl = showPdfReader ? book.pdfUrl! : "";
 
   const visiblePages = useMemo(() => (unlocked ? pages : pages.slice(0, 2)), [pages, unlocked]);
   const step = desktop ? 2 : 1;
@@ -96,9 +99,11 @@ export default function BookReader({
 
   const leftPage = visiblePages[displayIndex];
   const rightPage = desktop ? visiblePages[displayIndex + 1] : undefined;
-  const pageLabel = desktop
-    ? `Pages ${displayIndex + 1}-${Math.min(displayIndex + 2, visiblePages.length)} of ${visiblePages.length}`
-    : `Page ${displayIndex + 1} of ${visiblePages.length}`;
+  const pageLabel = showPdfReader
+    ? "Full PDF"
+    : desktop
+      ? `Pages ${displayIndex + 1}-${Math.min(displayIndex + 2, visiblePages.length)} of ${visiblePages.length}`
+      : `Page ${displayIndex + 1} of ${visiblePages.length}`;
 
   return (
     <div
@@ -149,15 +154,51 @@ export default function BookReader({
             </div>
           ) : null}
 
-          <div className="w-full max-w-[76rem]">
-            <ReaderSpread
-              leftPage={leftPage}
-              rightPage={rightPage}
-              desktop={desktop}
-              onPrevious={goPrevious}
-              onNext={goNext}
-            />
-          </div>
+          {showPdfReader ? (
+            <div className="w-full max-w-[90rem]">
+              <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(18,20,28,0.95),rgba(12,14,20,0.88))] shadow-[0_28px_60px_rgba(0,0,0,0.38)]">
+                <div className="flex flex-col gap-4 border-b border-white/8 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8fa7d6]">
+                      Uploaded Book File
+                    </p>
+                    <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white">
+                      Reading the original PDF
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-white/65">
+                      This book is using the PDF file uploaded by the library owner.
+                    </p>
+                  </div>
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#141a26] transition hover:bg-[#eef2f8]"
+                  >
+                    Open in new tab
+                  </a>
+                </div>
+
+                <div className="bg-[#0f1420] p-3 sm:p-4">
+                  <iframe
+                    src={`${pdfUrl}#toolbar=1&navpanes=0&view=FitH`}
+                    title={`${book.title} PDF reader`}
+                    className="h-[78vh] w-full rounded-[1.4rem] border border-white/10 bg-white"
+                  />
+                </div>
+              </section>
+            </div>
+          ) : (
+            <div className="w-full max-w-[76rem]">
+              <ReaderSpread
+                leftPage={leftPage}
+                rightPage={rightPage}
+                desktop={desktop}
+                onPrevious={goPrevious}
+                onNext={goNext}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
