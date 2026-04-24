@@ -200,7 +200,6 @@ export default function ReaderBookDetailPage({ book }: { book: ReaderBookDetail 
       proofImageUrl,
       proofFileName,
     });
-
     setModalAction(null);
   }
 
