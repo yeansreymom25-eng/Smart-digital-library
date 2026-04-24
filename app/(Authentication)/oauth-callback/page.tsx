@@ -9,7 +9,6 @@ import {
   readSocialAuthIntent,
 } from "@/src/lib/authFlow";
 import { toFriendlyAuthMessage } from "@/src/lib/authMessages";
-import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
 import { getSupabaseBrowserSSR } from "@/src/lib/supabaseBrowserSSR";
 
 function getTokensFromHash() {
@@ -78,13 +77,11 @@ export default function OAuthCallbackPage() {
   useEffect(() => {
     let active = true;
 
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) {
+    const client = getSupabaseBrowserSSR();
+    if (!client) {
       router.replace(AUTH_ROUTES.login);
       return;
     }
-
-    const client = supabase;
 
     function redirectToLogin(nextMessage: string) {
       clearSocialAuthIntent();
