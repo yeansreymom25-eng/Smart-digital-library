@@ -116,21 +116,28 @@ export default function OAuthCallbackPage() {
         ?? (user.user_metadata?.picture as string)
         ?? "";
 
-      await supabaseClient.from("profiles").upsert({
-        id: user.id,
-        full_name: fullName || undefined,
-        avatar_url: avatarUrl || undefined,
-        role: "user",
-      }, { onConflict: "id", ignoreDuplicates: true });
-
-      // Now fetch role
-      const { data: profile } = await supabaseClient
+      // Only create profile if it doesn't exist - never overwrite existing role
+      const { data: existingProfile } = await supabaseClient
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
 
-      const role = profile?.role as string | undefined;
+      if (!existingProfile) {
+        // New user - create profile with role "user"
+        await supabaseClient.from("profiles").insert({
+          id: user.id,
+          full_name: fullName || null,
+          avatar_url: avatarUrl || null,
+          role: "user",
+        });
+      } else if (!existingProfile.role) {
+        // Profile exists but no role - set to "user"
+        await supabaseClient.from("profiles").update({ role: "user" }).eq("id", user.id);
+      }
+
+      // Use existing role or default to "user"
+      const role = (existingProfile?.role as string | undefined) ?? "user";
       clearSocialAuthIntent();
 
       if (role === "admin" || role === "super_admin") {
