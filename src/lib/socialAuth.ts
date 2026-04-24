@@ -6,7 +6,7 @@ import {
   type SocialAuthIntent,
 } from "@/src/lib/authFlow";
 import { getClientAppOrigin } from "@/src/lib/siteUrl";
-import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
+import { getSupabaseBrowserSSR } from "@/src/lib/supabaseBrowserSSR";
 
 export type SocialProvider = "google" | "facebook";
 
@@ -14,7 +14,7 @@ export async function signInWithSocialProvider(
   provider: SocialProvider,
   intent: SocialAuthIntent = "login"
 ) {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = getSupabaseBrowserSSR();
 
   if (!supabase) {
     throw new Error(
@@ -22,18 +22,17 @@ export async function signInWithSocialProvider(
     );
   }
 
-  const redirectTo =
-    typeof window !== "undefined"
-      ? (() => {
-          storeSocialAuthIntent(intent);
-          return `${getClientAppOrigin()}${AUTH_ROUTES.oauthCallback}`;
-        })()
-      : undefined;
+  storeSocialAuthIntent(intent);
+  const redirectTo = `${getClientAppOrigin()}${AUTH_ROUTES.oauthCallback}`;
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
       redirectTo,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
     },
   });
 
