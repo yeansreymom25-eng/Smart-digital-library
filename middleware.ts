@@ -47,7 +47,14 @@ export async function middleware(request: NextRequest) {
 
   // ─── Logged in ────────────────────────────────────────────────────────────
   if (user) {
-    const role = user.user_metadata?.role as string | undefined;
+    // Check role from profiles table (works for both email and OAuth users)
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const role = (profile?.role as string | undefined) ?? (user.user_metadata?.role as string | undefined);
     const isAdmin = role === "admin";
     const isSuperAdmin = role === "super_admin";
 
