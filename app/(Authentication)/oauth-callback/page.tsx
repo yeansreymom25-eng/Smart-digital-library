@@ -106,46 +106,41 @@ export default function OAuthCallbackPage() {
       }
 
       const supabaseClient = getSupabaseBrowserSSR();
-
-      // Create profile for new OAuth users
-      if (supabaseClient && isFreshOAuthSignup(user)) {
-        const fullName = (user.user_metadata?.full_name as string)
-          ?? (user.user_metadata?.name as string)
-          ?? "";
-        const avatarUrl = (user.user_metadata?.avatar_url as string)
-          ?? (user.user_metadata?.picture as string)
-          ?? "";
-
-        await supabaseClient.from("profiles").upsert({
-          id: user.id,
-          full_name: fullName,
-          avatar_url: avatarUrl,
-          role: "user",
-        }, { onConflict: "id" });
-      }
-
-      // Check role and redirect accordingly
-      if (supabaseClient) {
-        const { data: profile } = await supabaseClient
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        const role = profile?.role as string | undefined;
-
-        clearSocialAuthIntent();
-
-        if (role === "admin" || role === "super_admin") {
-          router.replace("/library-owner/dashboard");
-        } else {
-          router.replace(AUTH_ROUTES.dashboard); // /home
-        }
+      if (!supabaseClient) {
+        router.replace(AUTH_ROUTES.dashboard);
         return;
       }
 
+      // Always upsert profile for OAuth users to ensure it exists
+      const fullName = (user.user_metadata?.full_name as string)
+        ?? (user.user_metadata?.name as string)
+        ?? "";
+      const avatarUrl = (user.user_metadata?.avatar_url as string)
+        ?? (user.user_metadata?.picture as string)
+        ?? "";
+
+      await supabaseClient.from("profiles").upsert({
+        id: user.id,
+        full_name: fullName || undefined,
+        avatar_url: avatarUrl || undefined,
+        role: "user",
+      }, { onConflict: "id", ignoreDuplicates: true });
+
+      // Now fetch role
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const role = profile?.role as string | undefined;
       clearSocialAuthIntent();
-      router.replace(AUTH_ROUTES.dashboard);
+
+      if (role === "admin" || role === "super_admin") {
+        router.replace("/library-owner/dashboard");
+      } else {
+        router.replace(AUTH_ROUTES.dashboard);
+      }
     }
 
     const { data: authListener } = client.auth.onAuthStateChange((_event, session) => {

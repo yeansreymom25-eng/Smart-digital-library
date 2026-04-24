@@ -38,6 +38,11 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/") ||
     pathname === "/";
 
+  // Always allow oauth-callback through without any redirects
+  if (pathname.startsWith("/oauth-callback")) {
+    return response;
+  }
+
   // ─── Not logged in → send to login ───────────────────────────────────────
   if (!user && !isAuthPage) {
     const res = NextResponse.redirect(new URL("/Log_in", request.url));
