@@ -66,15 +66,8 @@ function isFreshOAuthSignup(user: User | null | undefined) {
   return Math.abs(lastSignInAt - createdAt) <= 60_000;
 }
 
-function resolvePostOAuthRoute(user: User | null | undefined) {
-  const intent = readSocialAuthIntent();
-  const needsPasswordSetup =
-    intent === "signup" && (isFreshOAuthSignup(user) || !hasEmailPasswordIdentity(user));
-
-  if (needsPasswordSetup) {
-    return `${AUTH_ROUTES.updatePassword}?mode=social-signup`;
-  }
-
+function resolvePostOAuthRoute(_user: User | null | undefined) {
+  // Always redirect OAuth users to home — no password setup needed
   return AUTH_ROUTES.dashboard;
 }
 
