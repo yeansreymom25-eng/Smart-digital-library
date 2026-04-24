@@ -107,26 +107,23 @@ export default function LoginPage() {
               type="button"
               onClick={() => void handleSocialLogin("google")}
               disabled={socialLoading !== null}
-              className="rounded-full p-2 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-2 rounded-full border border-zinc-200 px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Continue with Google"
             >
-              <Image src="/User_Image/google.png" alt="Google" width={26} height={26} />
+              <Image src="/User_Image/google.png" alt="Google" width={20} height={20} />
+              {socialLoading === "google" ? "Redirecting..." : "Google"}
             </button>
             <button
               type="button"
-              onClick={() => void handleSocialLogin("apple")}
+              onClick={() => void handleSocialLogin("facebook")}
               disabled={socialLoading !== null}
-              className="rounded-full p-2 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Continue with Apple"
+              className="flex items-center gap-2 rounded-full border border-zinc-200 px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Continue with Facebook"
             >
-              <Image src="/User_Image/apple.png" alt="Apple" width={46} height={46} />
+              <Image src="/User_Image/facebook.svg" alt="Facebook" width={20} height={20} />
+              {socialLoading === "facebook" ? "Redirecting..." : "Facebook"}
             </button>
           </div>
-          {socialLoading && (
-            <p className="mt-3 text-center text-xs text-zinc-500">
-              Redirecting to {socialLoading === "google" ? "Google" : "Apple"}...
-            </p>
-          )}
           <p className="mt-4 text-center text-xs text-zinc-500">
             Don&apos;t have an account?{" "}
             <Link href={AUTH_ROUTES.signup} className="font-semibold text-zinc-900 underline">

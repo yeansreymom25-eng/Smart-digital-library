@@ -10,6 +10,7 @@ import {
 } from "@/src/lib/authFlow";
 import { toFriendlyAuthMessage } from "@/src/lib/authMessages";
 import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
+import { getSupabaseBrowserSSR } from "@/src/lib/supabaseBrowserSSR";
 
 function getTokensFromHash() {
   if (typeof window === "undefined") {
@@ -106,6 +107,26 @@ export default function OAuthCallbackPage() {
     }
 
     function completeSignIn(user: User | null | undefined) {
+      // Create profile row for new OAuth users
+      if (user && isFreshOAuthSignup(user)) {
+        const supabaseClient = getSupabaseBrowserSSR();
+        if (supabaseClient) {
+          const fullName = (user.user_metadata?.full_name as string)
+            ?? (user.user_metadata?.name as string)
+            ?? "";
+          const avatarUrl = (user.user_metadata?.avatar_url as string)
+            ?? (user.user_metadata?.picture as string)
+            ?? "";
+
+          void supabaseClient.from("profiles").upsert({
+            id: user.id,
+            full_name: fullName,
+            avatar_url: avatarUrl,
+            role: "user",
+          }, { onConflict: "id" });
+        }
+      }
+
       const nextRoute = resolvePostOAuthRoute(user);
       clearSocialAuthIntent();
       router.replace(nextRoute);

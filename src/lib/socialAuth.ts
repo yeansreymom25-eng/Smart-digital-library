@@ -8,7 +8,7 @@ import {
 import { getClientAppOrigin } from "@/src/lib/siteUrl";
 import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
 
-export type SocialProvider = "google" | "apple";
+export type SocialProvider = "google" | "facebook";
 
 export async function signInWithSocialProvider(
   provider: SocialProvider,

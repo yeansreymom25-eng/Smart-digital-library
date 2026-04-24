@@ -226,24 +226,30 @@ export default function SignupPage() {
 
             <p className="text-center text-[11px] text-zinc-400">Continue with :</p>
 
-            <div className="flex items-center justify-center gap-6">
-              <SocialIcon
-                src="/User_Image/google.png"
-                alt="Google"
+            <div className="flex items-center justify-center gap-4">
+              <button
+                type="button"
                 onClick={() => void handleSocialSignup("google")}
                 disabled={socialLoading !== null}
-              />
-              <SocialIcon
-                src="/User_Image/apple.png"
-                alt="Apple"
-                onClick={() => void handleSocialSignup("apple")}
+                className="flex items-center gap-2 rounded-full border border-zinc-200 px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Image src="/User_Image/google.png" alt="Google" width={20} height={20} />
+                {socialLoading === "google" ? "Redirecting..." : "Google"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSocialSignup("facebook")}
                 disabled={socialLoading !== null}
-              />
+                className="flex items-center gap-2 rounded-full border border-zinc-200 px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Image src="/User_Image/facebook.svg" alt="Facebook" width={20} height={20} />
+                {socialLoading === "facebook" ? "Redirecting..." : "Facebook"}
+              </button>
             </div>
 
             {socialLoading ? (
               <p className="text-center text-[11px] text-zinc-500">
-                Redirecting to {socialLoading === "google" ? "Google" : "Apple"}...
+                Redirecting to {socialLoading === "google" ? "Google" : "Facebook"}...
               </p>
             ) : null}
 
