@@ -1,17 +1,36 @@
-import { getReaderBookDetail, type ReaderBookDetail } from "@/src/lib/readerBookDetails";
+import { createServerClient } from "@supabase/ssr";
 
 export type ExploreOption = "english" | "khmer";
 
 export type ExploreCategoryCollection = {
   id: string;
   title: string;
-  englishTitle: string; // used for DB queries - always the English name
+  englishTitle: string;
   subtitle: string;
   color: string;
   heroBookId: string;
   heroImage: string;
   backgroundImages: string[];
   bookIds: string[];
+};
+
+type ExploreVisualPreset = Omit<ExploreCategoryCollection, "id" | "title" | "subtitle" | "englishTitle"> & {
+  matchKeys: string[];
+  defaultTitle: string;
+  defaultSubtitle: string;
+};
+
+type CategoryRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  library_type: string | null;
+};
+
+type BookVisualRow = {
+  id: string;
+  category: string | null;
+  cover_url: string | null;
 };
 
 const sharedBackgroundBooks = [
@@ -32,12 +51,11 @@ const khmerBookImages = [
 
 const khmerBackgroundBooks = khmerBookImages.slice(0, 4);
 
-export const englishExploreCategories: ExploreCategoryCollection[] = [
+const englishVisualPresets: ExploreVisualPreset[] = [
   {
-    id: "self-help",
-    title: "Self-Help",
-    englishTitle: "Self-Help",
-    subtitle: "Popular self-growth and practical books for readers who want to improve day by day.",
+    matchKeys: ["self-help", "self help"],
+    defaultTitle: "Self-Help",
+    defaultSubtitle: "Popular self-growth and practical books for readers who want to improve day by day.",
     color: "from-[#6e8465] to-[#49604a]",
     heroBookId: "atomic-habits",
     heroImage: "/MainPage/Books/Atomic_habits.jpg",
@@ -45,10 +63,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["atomic-habits", "life-impossible", "verity", "favorites", "three-days-in-june"],
   },
   {
-    id: "fantasy",
-    title: "Fantasy",
-    englishTitle: "Fantasy",
-    subtitle: "Magical worlds, adventure, mystery, and beautiful escapist fiction.",
+    matchKeys: ["fantasy"],
+    defaultTitle: "Fantasy",
+    defaultSubtitle: "Magical worlds, adventure, mystery, and beautiful escapist fiction.",
     color: "from-[#d85f58] to-[#9f3e3a]",
     heroBookId: "castle-in-the-moon",
     heroImage: "/MainPage/Books/The Castle In the Moon.jpg",
@@ -56,10 +73,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["castle-in-the-moon", "castle-in-the-mist", "thorns-and-roses", "wild-dark-shore", "song-of-achilles"],
   },
   {
-    id: "historical",
-    title: "Historical",
-    englishTitle: "Historical",
-    subtitle: "Stories with rich atmosphere, memory, and time-shaped settings.",
+    matchKeys: ["historical", "history"],
+    defaultTitle: "Historical",
+    defaultSubtitle: "Stories with rich atmosphere, memory, and time-shaped settings.",
     color: "from-[#5faa39] to-[#467d28]",
     heroBookId: "castle-in-the-mist",
     heroImage: "/MainPage/Books/The Castle In the Mist.jpeg",
@@ -67,10 +83,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["castle-in-the-mist", "song-of-achilles", "three-days-in-june", "dirt", "favorites"],
   },
   {
-    id: "sci-fi",
-    title: "Sci-Fi",
-    englishTitle: "Sci-Fi",
-    subtitle: "Futuristic, imaginative, and emotionally immersive speculative reads.",
+    matchKeys: ["sci-fi", "sci fi", "science fiction"],
+    defaultTitle: "Sci-Fi",
+    defaultSubtitle: "Futuristic, imaginative, and emotionally immersive speculative reads.",
     color: "from-[#1d2bca] to-[#10196f]",
     heroBookId: "life-impossible",
     heroImage: "/MainPage/Books/9780399547003.jpeg",
@@ -78,10 +93,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["life-impossible", "wild-dark-shore", "castle-in-the-mist", "favorites", "listen-for-the-lie"],
   },
   {
-    id: "classics",
-    title: "Classics",
-    englishTitle: "Classics",
-    subtitle: "Recognizable titles and timeless stories that still feel fresh.",
+    matchKeys: ["classics", "classic"],
+    defaultTitle: "Classics",
+    defaultSubtitle: "Recognizable titles and timeless stories that still feel fresh.",
     color: "from-[#cb7a73] to-[#954f4a]",
     heroBookId: "lessons-in-chemistry",
     heroImage: "/MainPage/Books/12132023_Book_Cover-Lessons_in_Chemistry_152020.jpg.webp",
@@ -89,10 +103,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["are-you-my-mother", "lessons-in-chemistry", "three-days-in-june", "song-of-achilles", "verity"],
   },
   {
-    id: "science",
-    title: "Science",
-    englishTitle: "Science",
-    subtitle: "Books for curious minds who enjoy ideas, knowledge, and discovery.",
+    matchKeys: ["science"],
+    defaultTitle: "Science",
+    defaultSubtitle: "Books for curious minds who enjoy ideas, knowledge, and discovery.",
     color: "from-[#db5bc8] to-[#983992]",
     heroBookId: "all-the-single-ladies",
     heroImage: "/MainPage/Books/9780062390769_p0_v4_s600x595.jpg",
@@ -100,10 +113,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["lessons-in-chemistry", "all-the-single-ladies", "atomic-habits", "life-impossible", "favorites"],
   },
   {
-    id: "finance",
-    title: "Finance",
-    englishTitle: "Finance",
-    subtitle: "Smart money and practical thinking for readers who want useful insight.",
+    matchKeys: ["finance", "business"],
+    defaultTitle: "Finance",
+    defaultSubtitle: "Smart money and practical thinking for readers who want useful insight.",
     color: "from-[#d5ad56] to-[#9a7331]",
     heroBookId: "atomic-habits",
     heroImage: "/MainPage/Books/Atomic_habits.jpg",
@@ -111,10 +123,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["atomic-habits", "life-impossible", "all-the-single-ladies", "favorites", "verity"],
   },
   {
-    id: "mystery",
-    title: "Mystery",
-    englishTitle: "Mystery",
-    subtitle: "Suspenseful, twisty books that keep readers curious until the end.",
+    matchKeys: ["mystery"],
+    defaultTitle: "Mystery",
+    defaultSubtitle: "Suspenseful, twisty books that keep readers curious until the end.",
     color: "from-[#6954f0] to-[#4532aa]",
     heroBookId: "listen-for-the-lie",
     heroImage: "/MainPage/Books/listen-for-the-lie.jpeg",
@@ -122,10 +133,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["listen-for-the-lie", "verity", "wild-dark-shore", "favorites", "castle-in-the-mist"],
   },
   {
-    id: "philosophy",
-    title: "Philosophy",
-    englishTitle: "Philosophy",
-    subtitle: "Reflective, idea-driven reads for slow thoughtful reading.",
+    matchKeys: ["philosophy"],
+    defaultTitle: "Philosophy",
+    defaultSubtitle: "Reflective, idea-driven reads for slow thoughtful reading.",
     color: "from-[#cb3b2e] to-[#8d1f18]",
     heroBookId: "are-you-my-mother",
     heroImage: "/MainPage/Books/Are you my mother.jpg",
@@ -133,10 +143,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["atomic-habits", "life-impossible", "elf-shack", "three-days-in-june", "song-of-achilles"],
   },
   {
-    id: "biography",
-    title: "Biography",
-    englishTitle: "Biography",
-    subtitle: "Personal stories, life journeys, and books with a human center.",
+    matchKeys: ["biography", "memoir"],
+    defaultTitle: "Biography",
+    defaultSubtitle: "Personal stories, life journeys, and books with a human center.",
     color: "from-[#b2be4d] to-[#76812e]",
     heroBookId: "all-the-single-ladies",
     heroImage: "/MainPage/Books/all-the-single-ladies.jpg.webp",
@@ -144,10 +153,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["all-the-single-ladies", "favorites", "dirt", "three-days-in-june", "life-impossible"],
   },
   {
-    id: "romance",
-    title: "Romance",
-    englishTitle: "Romance",
-    subtitle: "Warm, emotional, and relationship-driven books for comfort reading.",
+    matchKeys: ["romance"],
+    defaultTitle: "Romance",
+    defaultSubtitle: "Warm, emotional, and relationship-driven books for comfort reading.",
     color: "from-[#d9d9db] to-[#aeb3b9]",
     heroBookId: "it-ends-with-us",
     heroImage: "/MainPage/Books/12132023_Book_Cover-Lessons_in_Chemistry_152020.jpg.webp",
@@ -155,10 +163,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["it-ends-with-us", "thorns-and-roses", "all-the-single-ladies", "favorites", "three-days-in-june"],
   },
   {
-    id: "travel",
-    title: "Travel",
-    englishTitle: "Travel",
-    subtitle: "Place-based books and destination-inspired reading for wanderers.",
+    matchKeys: ["travel"],
+    defaultTitle: "Travel",
+    defaultSubtitle: "Place-based books and destination-inspired reading for wanderers.",
     color: "from-[#402420] to-[#241311]",
     heroBookId: "germany-travel-book",
     heroImage: "/MainPage/Books/Germany Travel Book.jpg",
@@ -166,10 +173,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["germany-travel-book", "life-impossible", "dirt", "favorites", "three-days-in-june"],
   },
   {
-    id: "drama",
-    title: "Drama",
-    englishTitle: "Drama",
-    subtitle: "Emotion-rich stories with tension, relationships, and strong character arcs.",
+    matchKeys: ["drama"],
+    defaultTitle: "Drama",
+    defaultSubtitle: "Emotion-rich stories with tension, relationships, and strong character arcs.",
     color: "from-[#5dcf69] to-[#359048]",
     heroBookId: "favorites",
     heroImage: "/MainPage/Books/the-favorites.jpeg",
@@ -177,10 +183,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["favorites", "it-ends-with-us", "thorns-and-roses", "dirt", "life-impossible"],
   },
   {
-    id: "cooking",
-    title: "Cooking",
-    englishTitle: "Cooking",
-    subtitle: "Practical and casual cooking books for readers who want something useful.",
+    matchKeys: ["cooking", "cook"],
+    defaultTitle: "Cooking",
+    defaultSubtitle: "Practical and casual cooking books for readers who want something useful.",
     color: "from-[#6cf0ca] to-[#3cb98e]",
     heroBookId: "hate-to-cook-book",
     heroImage: "/MainPage/Books/The I Hate To Cook Book.jpg",
@@ -188,10 +193,9 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["hate-to-cook-book", "atomic-habits", "germany-travel-book", "all-the-single-ladies", "life-impossible"],
   },
   {
-    id: "horror",
-    title: "Horror",
-    englishTitle: "Horror",
-    subtitle: "Dark, eerie, and atmospheric reads with a stronger edge.",
+    matchKeys: ["horror"],
+    defaultTitle: "Horror",
+    defaultSubtitle: "Dark, eerie, and atmospheric reads with a stronger edge.",
     color: "from-[#334e73] to-[#223754]",
     heroBookId: "wild-dark-shore",
     heroImage: "/MainPage/Books/The Castle In the Mist.jpeg",
@@ -200,12 +204,11 @@ export const englishExploreCategories: ExploreCategoryCollection[] = [
   },
 ];
 
-export const khmerExploreCategories: ExploreCategoryCollection[] = [
+const khmerVisualPresets: ExploreVisualPreset[] = [
   {
-    id: "self-help",
-    title: "ជំនួយខ្លួនឯង",
-    englishTitle: "Self-Help",
-    subtitle: "សៀវភៅខ្មែរដែលជួយអភិវឌ្ឍខ្លួនឯង និងជីវិតប្រចាំថ្ងៃ។",
+    matchKeys: ["self-help", "self help"],
+    defaultTitle: "Self-Help",
+    defaultSubtitle: "Khmer self-growth and practical books.",
     color: "from-[#6e8465] to-[#49604a]",
     heroBookId: "khmer-1",
     heroImage: khmerBookImages[0],
@@ -213,10 +216,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-1", "khmer-6", "khmer-5", "khmer-2"],
   },
   {
-    id: "fantasy",
-    title: "រឿងអស្ចារ្យ",
-    englishTitle: "Fantasy",
-    subtitle: "ពិភពមន្តអាគម និងការ冒险នៅក្នុងអក្សរសិល្ប៍ខ្មែរ។",
+    matchKeys: ["fantasy"],
+    defaultTitle: "Fantasy",
+    defaultSubtitle: "Khmer fantasy and imaginative stories.",
     color: "from-[#d85f58] to-[#9f3e3a]",
     heroBookId: "khmer-2",
     heroImage: khmerBookImages[1],
@@ -224,10 +226,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-2", "khmer-3", "khmer-1", "khmer-4"],
   },
   {
-    id: "historical",
-    title: "ប្រវត្តិសាស្ត្រ",
-    englishTitle: "Historical",
-    subtitle: "សៀវភៅខ្មែរដែលពិពណ៌នាអំពីប្រវត្តិ និងវប្បធម៌។",
+    matchKeys: ["historical", "history"],
+    defaultTitle: "Historical",
+    defaultSubtitle: "Khmer books shaped by history and culture.",
     color: "from-[#5faa39] to-[#467d28]",
     heroBookId: "khmer-3",
     heroImage: khmerBookImages[2],
@@ -235,10 +236,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-3", "khmer-4", "khmer-1", "khmer-5"],
   },
   {
-    id: "sci-fi",
-    title: "វិទ្យាសាស្ត្រប្រឌិត",
-    englishTitle: "Sci-Fi",
-    subtitle: "រឿងប្រឌិតផ្អែកលើវិទ្យាសាស្ត្រ និងបច្ចេកវិទ្យា។",
+    matchKeys: ["sci-fi", "sci fi", "science fiction"],
+    defaultTitle: "Sci-Fi",
+    defaultSubtitle: "Speculative Khmer reads and futuristic ideas.",
     color: "from-[#1d2bca] to-[#10196f]",
     heroBookId: "khmer-4",
     heroImage: khmerBookImages[3],
@@ -246,10 +246,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-4", "khmer-2", "khmer-3", "khmer-5"],
   },
   {
-    id: "classics",
-    title: "អក្សរសិល្ប៍ក្លាស្សិក",
-    englishTitle: "Classics",
-    subtitle: "សៀវភៅខ្មែរបុរាណដ៏ល្បីល្បាញ។",
+    matchKeys: ["classics", "classic"],
+    defaultTitle: "Classics",
+    defaultSubtitle: "Khmer classics and familiar works.",
     color: "from-[#cb7a73] to-[#954f4a]",
     heroBookId: "khmer-5",
     heroImage: khmerBookImages[4],
@@ -257,10 +256,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-5", "khmer-1", "khmer-2", "khmer-4"],
   },
   {
-    id: "science",
-    title: "វិទ្យាសាស្ត្រ",
-    englishTitle: "Science",
-    subtitle: "សៀវភៅចំណេះដឹងវិទ្យាសាស្ត្រ សម្រាប់អ្នកចូលចិត្តស្រាវជ្រាវ។",
+    matchKeys: ["science"],
+    defaultTitle: "Science",
+    defaultSubtitle: "Knowledge and science for curious Khmer readers.",
     color: "from-[#db5bc8] to-[#983992]",
     heroBookId: "khmer-6",
     heroImage: khmerBookImages[5],
@@ -268,10 +266,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-6", "khmer-1", "khmer-3", "khmer-5"],
   },
   {
-    id: "finance",
-    title: "ហិរញ្ញវត្ថុ",
-    englishTitle: "Finance",
-    subtitle: "ចំណេះដឹងហិរញ្ញវត្ថុ និងការគ្រប់គ្រងប្រាក់កាស។",
+    matchKeys: ["finance", "business"],
+    defaultTitle: "Finance",
+    defaultSubtitle: "Money and practical thinking in Khmer.",
     color: "from-[#d5ad56] to-[#9a7331]",
     heroBookId: "khmer-1",
     heroImage: khmerBookImages[0],
@@ -279,10 +276,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-1", "khmer-6", "khmer-2", "khmer-3"],
   },
   {
-    id: "mystery",
-    title: "អាថ៌កំបាំង",
-    englishTitle: "Mystery",
-    subtitle: "រឿងដ៏គួរឱ្យចង់ដឹង និងអាថ៌កំបាំងសម្រាប់អ្នកអាន។",
+    matchKeys: ["mystery"],
+    defaultTitle: "Mystery",
+    defaultSubtitle: "Suspenseful Khmer books and hidden clues.",
     color: "from-[#6954f0] to-[#4532aa]",
     heroBookId: "khmer-2",
     heroImage: khmerBookImages[1],
@@ -290,10 +286,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-2", "khmer-4", "khmer-3", "khmer-5"],
   },
   {
-    id: "philosophy",
-    title: "ទស្សនវិជ្ជា",
-    englishTitle: "Philosophy",
-    subtitle: "ការគិតស៊ីជម្រៅ និងទស្សនវិជ្ជាខ្មែរ។",
+    matchKeys: ["philosophy"],
+    defaultTitle: "Philosophy",
+    defaultSubtitle: "Reflective and idea-driven Khmer reading.",
     color: "from-[#cb3b2e] to-[#8d1f18]",
     heroBookId: "khmer-3",
     heroImage: khmerBookImages[2],
@@ -301,10 +296,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-3", "khmer-1", "khmer-6", "khmer-5"],
   },
   {
-    id: "biography",
-    title: "ជីវប្រវត្តិ",
-    englishTitle: "Biography",
-    subtitle: "រឿងជីវិតពិត និងបទពិសោធន៍របស់មនុស្សល្បី។",
+    matchKeys: ["biography", "memoir"],
+    defaultTitle: "Biography",
+    defaultSubtitle: "Life stories and personal journeys.",
     color: "from-[#b2be4d] to-[#76812e]",
     heroBookId: "khmer-4",
     heroImage: khmerBookImages[3],
@@ -312,10 +306,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-4", "khmer-2", "khmer-1", "khmer-3"],
   },
   {
-    id: "romance",
-    title: "រឿងស្នេហា",
-    englishTitle: "Romance",
-    subtitle: "រឿងស្នេហាខ្មែរ ដ៏ពណ៌ស្រស់ និងទន់ភ្លន់។",
+    matchKeys: ["romance"],
+    defaultTitle: "Romance",
+    defaultSubtitle: "Warm and emotional Khmer romance reads.",
     color: "from-[#d9d9db] to-[#aeb3b9]",
     heroBookId: "khmer-5",
     heroImage: khmerBookImages[4],
@@ -323,10 +316,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-5", "khmer-4", "khmer-2", "khmer-1"],
   },
   {
-    id: "travel",
-    title: "ទេសចរណ៍",
-    englishTitle: "Travel",
-    subtitle: "ការរៀបរាប់អំពីដំណើរទេសចរណ៍ និងកន្លែងគួរចូលទស្សនា។",
+    matchKeys: ["travel"],
+    defaultTitle: "Travel",
+    defaultSubtitle: "Journey-based reads and travel inspiration.",
     color: "from-[#402420] to-[#241311]",
     heroBookId: "khmer-6",
     heroImage: khmerBookImages[5],
@@ -334,10 +326,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-6", "khmer-3", "khmer-2", "khmer-1"],
   },
   {
-    id: "drama",
-    title: "រឿងនាដកម្ម",
-    englishTitle: "Drama",
-    subtitle: "រឿងដ៏អារម្មណ៍ណ៍ ពោរពេញដោយបទពិសោធន៍ជីវិត។",
+    matchKeys: ["drama"],
+    defaultTitle: "Drama",
+    defaultSubtitle: "Emotion-rich Khmer stories and tension-filled arcs.",
     color: "from-[#5dcf69] to-[#359048]",
     heroBookId: "khmer-1",
     heroImage: khmerBookImages[0],
@@ -345,10 +336,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-1", "khmer-4", "khmer-3", "khmer-2"],
   },
   {
-    id: "cooking",
-    title: "ធ្វើម្ហូប",
-    englishTitle: "Cooking",
-    subtitle: "ម្ហូបខ្មែរ និងការណែនាំធ្វើម្ហូបប្រចាំថ្ងៃ។",
+    matchKeys: ["cooking", "cook"],
+    defaultTitle: "Cooking",
+    defaultSubtitle: "Everyday Khmer cooking and useful food books.",
     color: "from-[#6cf0ca] to-[#3cb98e]",
     heroBookId: "khmer-2",
     heroImage: khmerBookImages[1],
@@ -356,10 +346,9 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
     bookIds: ["khmer-2", "khmer-6", "khmer-1", "khmer-5"],
   },
   {
-    id: "horror",
-    title: "រឿងភ័យខ្លាច",
-    englishTitle: "Horror",
-    subtitle: "រឿងដ៏គួរឱ្យភ័យខ្លាច និងមានបរិយាកាសងងឹត។",
+    matchKeys: ["horror"],
+    defaultTitle: "Horror",
+    defaultSubtitle: "Dark and eerie Khmer reading.",
     color: "from-[#334e73] to-[#223754]",
     heroBookId: "khmer-3",
     heroImage: khmerBookImages[2],
@@ -368,18 +357,107 @@ export const khmerExploreCategories: ExploreCategoryCollection[] = [
   },
 ];
 
-export function getExploreCategories(option: ExploreOption) {
-  return option === "khmer" ? khmerExploreCategories : englishExploreCategories;
-}
-
-export function getExploreCategory(option: ExploreOption, categoryId: string) {
-  return getExploreCategories(option).find((category) => category.id === categoryId);
-}
-
-export async function getExploreCategoryBooks(category: ExploreCategoryCollection): Promise<ReaderBookDetail[]> {
-  const books = await Promise.all(
-    category.bookIds.map((id) => getReaderBookDetail(id))
+function getClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
   );
+}
 
-  return books.filter((book): book is ReaderBookDetail => Boolean(book));
+function normalizeCategoryKey(value: string) {
+  return value.trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function getVisualPresets(option: ExploreOption) {
+  return option === "khmer" ? khmerVisualPresets : englishVisualPresets;
+}
+
+function matchVisualPreset(option: ExploreOption, categoryName: string, index: number) {
+  const normalizedName = normalizeCategoryKey(categoryName);
+  const presets = getVisualPresets(option);
+
+  return (
+    presets.find((preset) =>
+      preset.matchKeys.some((key) => normalizeCategoryKey(key) === normalizedName)
+    ) ?? presets[index % presets.length]
+  );
+}
+
+function buildExploreCategory(row: CategoryRow, option: ExploreOption, index: number): ExploreCategoryCollection {
+  const preset = matchVisualPreset(option, row.name, index);
+  return {
+    id: row.id,
+    title: row.name,
+    englishTitle: row.name,
+    subtitle: row.description?.trim() || preset.defaultSubtitle,
+    color: preset.color,
+    heroBookId: preset.heroBookId,
+    heroImage: preset.heroImage,
+    backgroundImages: preset.backgroundImages,
+    bookIds: preset.bookIds,
+  };
+}
+
+export async function readExploreCategories(option: ExploreOption): Promise<ExploreCategoryCollection[]> {
+  const supabase = getClient();
+  const [{ data: categoriesData, error: categoriesError }, { data: booksData, error: booksError }] =
+    await Promise.all([
+      supabase
+        .from("categories")
+        .select("id, name, description, library_type")
+        .eq("library_type", option)
+        .order("name", { ascending: true }),
+      supabase
+        .from("books")
+        .select("id, category, cover_url")
+        .eq("status", "Published")
+        .order("created_at", { ascending: false }),
+    ]);
+
+  if (categoriesError) {
+    throw new Error(categoriesError.message);
+  }
+
+  if (booksError) {
+    throw new Error(booksError.message);
+  }
+
+  const booksByCategory = new Map<string, BookVisualRow[]>();
+
+  for (const row of (booksData ?? []) as BookVisualRow[]) {
+    const categoryName = String(row.category ?? "").trim();
+    if (!categoryName) {
+      continue;
+    }
+
+    const current = booksByCategory.get(categoryName) ?? [];
+    current.push(row);
+    booksByCategory.set(categoryName, current);
+  }
+
+  return ((categoriesData ?? []) as CategoryRow[]).map((row, index) => {
+    const category = buildExploreCategory(row, option, index);
+    const matchingBooks = booksByCategory.get(row.name) ?? [];
+    const realCoverImages = matchingBooks
+      .map((book) => String(book.cover_url ?? "").trim())
+      .filter(Boolean)
+      .slice(0, 4);
+
+    return {
+      ...category,
+      heroBookId: matchingBooks[0]?.id ?? category.heroBookId,
+      heroImage: realCoverImages[0] ?? category.heroImage,
+      backgroundImages: realCoverImages.length > 0 ? realCoverImages : category.backgroundImages,
+      bookIds: matchingBooks.slice(0, 5).map((book) => book.id).filter(Boolean),
+    };
+  });
+}
+
+export async function readExploreCategory(
+  option: ExploreOption,
+  categoryId: string
+): Promise<ExploreCategoryCollection | undefined> {
+  const categories = await readExploreCategories(option);
+  return categories.find((category) => category.id === categoryId);
 }

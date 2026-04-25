@@ -277,7 +277,7 @@ export default function ReaderBookDetailPage({
               <div className="mb-5 flex justify-center lg:justify-start">
                 <button
                   type="button"
-                  onClick={() => router.back()}
+                  onClick={() => router.push("/my-library")}
                   className="inline-flex items-center gap-2 rounded-[0.8rem] bg-[#e8eaee] px-4 py-2 text-[1rem] font-medium text-[#6b7482] transition hover:bg-[#dfe4ea] hover:text-[#222733]"
                 >
                   <BackIcon />
@@ -421,7 +421,7 @@ export default function ReaderBookDetailPage({
                 {accessStatus === "approved" ? (
                   <button
                     type="button"
-                    onClick={() => router.push(`/book/${book.slug}/read`)}
+                    onClick={() => router.push(`/book/${book.id}/read`)}
                     className="min-h-[4.4rem] w-full rounded-full bg-[#1f2530] px-8 py-4 text-[1.15rem] font-semibold text-white shadow-[0_14px_24px_rgba(31,37,48,0.18)]"
                   >
                     Read now

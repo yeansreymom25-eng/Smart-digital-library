@@ -20,6 +20,7 @@ export default async function AdminProfilePage() {
 
   return (
     <AdminProfileSettings
+      userId={user?.id ?? ""}
       fullName={(profile?.full_name as string) ?? ""}
       email={user?.email ?? ""}
       role={(profile?.role as string) ?? "admin"}

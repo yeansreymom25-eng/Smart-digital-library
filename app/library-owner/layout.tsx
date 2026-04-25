@@ -14,17 +14,32 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const { data: { user } } = await supabase.auth.getUser();
 
   let plan = "No Plan";
+  let ownerName = "Library Owner";
+  let ownerAvatarUrl = "";
 
   if (user) {
-    const { data } = await supabase
-      .from("subscriptions")
-      .select("plan, status")
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .maybeSingle();
+    const [{ data: subscription }, { data: profile }] = await Promise.all([
+      supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle(),
+    ]);
 
-    if (data?.plan) plan = `${data.plan as string} Plan`;
+    if (subscription?.plan) plan = `${subscription.plan as string} Plan`;
+    if (profile?.full_name) ownerName = profile.full_name as string;
+    if (profile?.avatar_url) ownerAvatarUrl = profile.avatar_url as string;
   }
 
-  return <AdminLayoutShell plan={plan}>{children}</AdminLayoutShell>;
+  return (
+    <AdminLayoutShell plan={plan} ownerName={ownerName} ownerAvatarUrl={ownerAvatarUrl}>
+      {children}
+    </AdminLayoutShell>
+  );
 }

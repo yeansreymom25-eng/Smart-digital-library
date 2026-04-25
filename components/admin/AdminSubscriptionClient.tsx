@@ -84,11 +84,43 @@ export default function AdminSubscriptionClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
+  const currentPlan = initialSubscription.plan;
+  const hasExistingPlan = Boolean(initialSubscription.plan);
+  const isCurrentPlanSelected = selectedPlan?.name === currentPlan;
+
+  const statusCopy =
+    subscriptionStatus === "active"
+      ? {
+          badge: "Active plan",
+          tone: "border-[#9fe0b2] bg-[#edf9f0] text-[#2f7d42]",
+          body: currentPlan
+            ? `Your current subscription is ${currentPlan} Plan. You can keep it or choose another plan below to submit a change.`
+            : "Your subscription is active.",
+        }
+      : subscriptionStatus === "pending"
+        ? {
+            badge: "Pending review",
+            tone: "border-[#bfd8ff] bg-[#f2f7ff] text-[#2456b6]",
+            body: currentPlan
+              ? `Your ${currentPlan} Plan request is waiting for approval. You can still review plans below and prepare a different choice if needed.`
+              : "Your subscription request is waiting for approval.",
+          }
+        : subscriptionStatus === "rejected"
+          ? {
+              badge: "Needs update",
+              tone: "border-[#ffd2d2] bg-[#fff4f4] text-[#c93d3d]",
+              body: "Your last subscription request was rejected. Please choose a plan and submit it again following the payment rules below.",
+            }
+          : {
+              badge: "No active plan",
+              tone: "border-[#d8e6fb] bg-[#f7fbff] text-[#4d6691]",
+              body: "Choose a plan below to continue. Paid plans still require QR payment and proof upload.",
+            };
 
   function handleChoosePlan(plan: Plan) {
     setSelectedPlan(plan);
-    setPaymentSubmitted(false);
-    setSubscriptionStatus("not_selected");
+    setPaymentSubmitted(initialSubscription.status === "pending" && initialSubscription.plan === plan.name);
+    setSubscriptionStatus(initialSubscription.plan === plan.name ? initialSubscription.status : "not_selected");
     setUploadError(null);
     if (plan.name !== "Normal") {
       requestAnimationFrame(() => {
@@ -231,11 +263,31 @@ export default function AdminSubscriptionClient({
                   <div className="px-5 pb-6">
                     <button type="button" onClick={() => handleChoosePlan(plan)}
                       className={`mx-auto block w-full max-w-[160px] rounded-md px-5 py-2 text-sm font-semibold text-white transition ${selectedPlan?.name === plan.name ? "bg-[#255fb4] hover:bg-[#1f549f]" : "bg-[#4794f1] hover:bg-[#327fe0]"}`}>
-                      {selectedPlan?.name === plan.name ? "Selected" : "Choose Plan"}
+                      {selectedPlan?.name === plan.name ? "Selected" : currentPlan === plan.name && subscriptionStatus === "active" ? "Current Plan" : "Choose Plan"}
                     </button>
                   </div>
                 </article>
               ))}
+            </div>
+
+            <div className={`mx-auto mt-8 w-full max-w-[1280px] rounded-[24px] border-2 px-5 py-5 shadow-[0_12px_28px_rgba(135,164,206,0.08)] ${statusCopy.tone}`}>
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em]">{statusCopy.badge}</p>
+                  <h2 className="mt-2 text-2xl font-black text-slate-950">
+                    {currentPlan ? `${currentPlan} Plan` : "Choose your first plan"}
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{statusCopy.body}</p>
+                </div>
+                <div className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3 text-sm text-slate-700">
+                  <p>
+                    Status: <span className="font-semibold capitalize">{subscriptionStatus.replace("_", " ")}</span>
+                  </p>
+                  {initialSubscription.updatedAt ? (
+                    <p className="mt-1 text-xs text-slate-500">Last updated: {new Date(initialSubscription.updatedAt).toLocaleString()}</p>
+                  ) : null}
+                </div>
+              </div>
             </div>
 
             <div className="mx-auto mt-10 grid w-full max-w-[1280px] gap-4 md:grid-cols-3">
@@ -255,8 +307,12 @@ export default function AdminSubscriptionClient({
                     <h2 className="text-2xl font-black text-slate-950">{selectedPlan.name} plan</h2>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
                       {selectedPlan.name === "Normal"
-                        ? "You can continue directly because the Normal plan does not require payment proof."
-                        : "This paid plan requires QR payment and proof upload before advanced features are activated."}
+                        ? hasExistingPlan && !isCurrentPlanSelected
+                          ? "Switching to the Normal plan will apply directly because it does not require payment proof."
+                          : "You can continue directly because the Normal plan does not require payment proof."
+                        : hasExistingPlan && !isCurrentPlanSelected
+                          ? `You are preparing to change from ${currentPlan} to ${selectedPlan.name}. This paid plan still requires QR payment and proof upload before the change can be activated.`
+                          : "This paid plan requires QR payment and proof upload before advanced features are activated."}
                     </p>
                   </div>
                   <div className="rounded-2xl border-2 border-[#9fc6ff] bg-[#eef5ff] px-4 py-3 sm:min-w-[180px]">
@@ -268,10 +324,14 @@ export default function AdminSubscriptionClient({
                 {selectedPlan.name === "Normal" ? (
                   <div className="mt-6 rounded-[20px] border-2 border-[#a8ccff] bg-[#f7fbff] p-5">
                     <p className="text-sm font-semibold text-slate-900">Next step</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">After selecting the Normal plan, continue directly to the admin dashboard.</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {hasExistingPlan && !isCurrentPlanSelected
+                        ? "After selecting the Normal plan, continue to save this plan change immediately."
+                        : "After selecting the Normal plan, continue directly to the admin dashboard."}
+                    </p>
                     <button type="button" onClick={() => void handleContinueNormalPlan()} disabled={isSubmitting}
                       className="mt-4 rounded-xl bg-[#4794f1] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#327fe0] disabled:opacity-50">
-                      {isSubmitting ? "Saving..." : "Continue to Dashboard"}
+                      {isSubmitting ? "Saving..." : hasExistingPlan && !isCurrentPlanSelected ? "Update to Normal Plan" : "Continue to Dashboard"}
                     </button>
                   </div>
                 ) : (
@@ -332,7 +392,7 @@ export default function AdminSubscriptionClient({
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
                         <button type="button" onClick={() => void handleSubmitProof()} disabled={!proofFile || isSubmitting}
                           className="rounded-xl bg-[#4794f1] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#327fe0] disabled:cursor-not-allowed disabled:opacity-50">
-                          {isSubmitting ? "Uploading & Submitting..." : "Submit Payment Proof"}
+                          {isSubmitting ? "Uploading & Submitting..." : hasExistingPlan && !isCurrentPlanSelected ? "Submit Plan Change" : "Submit Payment Proof"}
                         </button>
                         {paymentSubmitted ? (
                           <button type="button" onClick={() => router.push("/library-owner/transactions")}

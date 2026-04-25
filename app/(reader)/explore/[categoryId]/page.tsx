@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 import ExploreCategoryCollectionPage from "@/components/main/ExploreCategoryCollectionPage";
-import { getExploreCategory, type ExploreOption } from "@/src/lib/exploreCategoryCollections";
+import { readExploreCategory, type ExploreOption } from "@/src/lib/exploreCategoryCollections";
 import type { ReaderBookDetail } from "@/src/lib/readerBookDetails";
 
 export default async function ExploreCategoryPage({
@@ -14,7 +14,7 @@ export default async function ExploreCategoryPage({
   const { categoryId } = await params;
   const { option } = await searchParams;
   const selectedOption: ExploreOption = option === "khmer" ? "khmer" : "english";
-  const category = getExploreCategory(selectedOption, categoryId);
+  const category = await readExploreCategory(selectedOption, categoryId);
 
   if (!category) notFound();
 
@@ -29,7 +29,7 @@ export default async function ExploreCategoryPage({
     .from("books")
     .select("*")
     .eq("status", "Published")
-    .ilike("category", category.englishTitle)
+    .eq("category", category.englishTitle)
     .order("created_at", { ascending: false });
 
   const dbBooks: ReaderBookDetail[] = (data ?? []).map((row) => {

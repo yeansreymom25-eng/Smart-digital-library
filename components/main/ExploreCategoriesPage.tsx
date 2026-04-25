@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
-  getExploreCategories,
   type ExploreCategoryCollection,
   type ExploreOption,
 } from "@/src/lib/exploreCategoryCollections";
@@ -68,12 +67,13 @@ function ExploreCategoryCard({
 
 export default function ExploreCategoriesPage({
   option = "english",
+  categories,
 }: {
   option?: ExploreOption;
+  categories: ExploreCategoryCollection[];
 }) {
   const router = useRouter();
   const [selectedOption, setSelectedOption] = useState<ExploreOption>(option);
-  const categories = getExploreCategories(selectedOption);
 
   function handleOptionChange(nextOption: ExploreOption) {
     setSelectedOption(nextOption);

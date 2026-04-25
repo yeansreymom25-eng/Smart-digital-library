@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { writeProfileDisplay } from "@/src/lib/profileDisplay";
 
 type Props = {
+  userId: string;
   fullName: string;
   email: string;
   role: string;
@@ -13,7 +15,8 @@ type Props = {
 function MailIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-      <rect x="4" y="6" width="16" height="12" rx="2.5" /><path d="m5 8 7 5 7-5" />
+      <rect x="4" y="6" width="16" height="12" rx="2.5" />
+      <path d="m5 8 7 5 7-5" />
     </svg>
   );
 }
@@ -26,30 +29,86 @@ function ChevronDownIcon() {
   );
 }
 
-export default function AdminProfileSettings({ fullName, email, role, avatarUrl }: Props) {
+async function fileToDataUrl(file: File) {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function AdminProfileSettings({
+  userId,
+  fullName,
+  email,
+  role,
+  avatarUrl,
+}: Props) {
+  const router = useRouter();
   const [name, setName] = useState(fullName);
+  const [avatar, setAvatar] = useState(avatarUrl);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
-  const initials = fullName
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "AD";
+  const displayName = name.trim() || fullName || "Admin";
+  const initials = useMemo(
+    () =>
+      displayName
+        .split(" ")
+        .map((word) => word[0] ?? "")
+        .join("")
+        .toUpperCase()
+        .slice(0, 2) || "AD",
+    [displayName]
+  );
+
+  async function handleAvatarChange(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      setError("");
+      const avatarDataUrl = await fileToDataUrl(file);
+      setAvatar(avatarDataUrl);
+    } catch {
+      setError("Could not read that image. Please try another file.");
+    }
+  }
 
   async function handleSave() {
     setIsSaving(true);
+    setError("");
+
     try {
-      await fetch("/api/profile/update", {
+      const response = await fetch("/api/profile/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName: name }),
+        body: JSON.stringify({
+          fullName: name.trim(),
+          avatarDataUrl: avatar || null,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error("Profile update failed");
+      }
+
+      if (userId) {
+        writeProfileDisplay(userId, {
+          fullName: name.trim() || fullName,
+          email,
+          avatarUrl: avatar || null,
+        });
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      router.refresh();
     } catch {
-      // silently fail
+      setError("Could not save profile changes.");
     } finally {
       setIsSaving(false);
     }
@@ -70,30 +129,54 @@ export default function AdminProfileSettings({ fullName, email, role, avatarUrl 
         <div className="mt-6 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="flex h-[92px] w-[92px] items-center justify-center rounded-full bg-[linear-gradient(145deg,#1f2937,#f1c7b5)] text-2xl font-bold text-white shadow-[0_12px_25px_rgba(148,163,184,0.22)]">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={fullName} className="h-full w-full rounded-full object-cover" />
-              ) : initials}
+              {avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatar} alt={displayName} className="h-full w-full rounded-full object-cover" />
+              ) : (
+                initials
+              )}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl font-semibold text-slate-950">{fullName || "Admin"}</h2>
-                <span className="rounded-full bg-[#d93eb2] px-3 py-1 text-xs font-semibold text-white capitalize">{role}</span>
+                <h2 className="text-xl font-semibold text-slate-950">{displayName}</h2>
+                <span className="rounded-full bg-[#d93eb2] px-3 py-1 text-xs font-semibold text-white capitalize">
+                  {role}
+                </span>
               </div>
               <p className="mt-2 text-sm text-slate-500">{email}</p>
+              <label className="mt-3 inline-flex cursor-pointer rounded-full border border-[#dbe2ec] bg-white px-3 py-2 text-xs font-semibold text-[#4d6691] transition hover:border-[#c4d2e4] hover:bg-[#f8fbff]">
+                Change photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => void handleAvatarChange(event.target.files?.[0])}
+                />
+              </label>
             </div>
           </div>
 
-          <button type="button" onClick={() => void handleSave()} disabled={isSaving}
-            className="inline-flex h-11 items-center justify-center rounded-[10px] bg-[#4b82f9] px-7 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(75,130,249,0.24)] transition hover:bg-[#3d74ea] disabled:opacity-50">
-            {isSaving ? "Saving..." : saved ? "Saved ✓" : "Save Changes"}
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={isSaving}
+            className="inline-flex h-11 items-center justify-center rounded-[10px] bg-[#4b82f9] px-7 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(75,130,249,0.24)] transition hover:bg-[#3d74ea] disabled:opacity-50"
+          >
+            {isSaving ? "Saving..." : saved ? "Saved OK" : "Save Changes"}
           </button>
         </div>
+
+        {error ? <p className="mt-4 text-sm font-medium text-[#d14343]">{error}</p> : null}
 
         <div className="mt-8 grid gap-5 lg:grid-cols-2">
           <label className="block">
             <span className="mb-3 block text-sm font-medium text-slate-700">Full Name</span>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-              className="h-[52px] w-full rounded-[10px] border border-[#f0f0f0] bg-[#fafafa] px-4 text-sm text-slate-700 outline-none focus:border-[#4b82f9]" />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-[52px] w-full rounded-[10px] border border-[#f0f0f0] bg-[#fafafa] px-4 text-sm text-slate-700 outline-none focus:border-[#4b82f9]"
+            />
           </label>
 
           <label className="block">

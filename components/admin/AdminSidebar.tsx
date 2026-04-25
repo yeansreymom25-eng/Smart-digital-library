@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import { adminNavigation } from "@/src/lib/adminNavigation";
 import { useLogout } from "@/src/hooks/useLogout";
 
@@ -82,9 +83,25 @@ function NavIcon({ title }: { title: string }) {
   }
 }
 
-export default function AdminSidebar({ plan = "No Plan" }: { plan?: string }) {
+export default function AdminSidebar({
+  plan = "No Plan",
+  ownerName = "Library Owner",
+  ownerAvatarUrl = "",
+}: {
+  plan?: string;
+  ownerName?: string;
+  ownerAvatarUrl?: string;
+}) {
   const pathname = usePathname();
   const { logout, isLoading } = useLogout();
+  const initials = useMemo(() => {
+    return ownerName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "LO";
+  }, [ownerName]);
 
   const navItems = adminNavigation.filter(
     (item) => item.title !== "Overview" && item.title !== "Subscription"
@@ -94,15 +111,17 @@ export default function AdminSidebar({ plan = "No Plan" }: { plan?: string }) {
     <aside className="flex min-h-[calc(100vh-2.5rem)] flex-col overflow-hidden rounded-[14px] border border-[#d9d9d9] bg-white shadow-[0_10px_30px_rgba(120,140,170,0.08)]">
       <div className="border-b border-[#d9d9d9] px-6 py-6">
         <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
-              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
-              <path d="M4 20a8 8 0 0 1 16 0" />
-            </svg>
+          <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-sm font-semibold text-white">
+            {ownerAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={ownerAvatarUrl} alt={ownerName} className="h-full w-full object-cover" />
+            ) : (
+              initials
+            )}
           </div>
           <div>
             <h2 className="text-[1.45rem] font-bold leading-none text-slate-950">
-              Library Owner
+              {ownerName}
             </h2>
             <p className="mt-1 text-base text-slate-500">{plan}</p>
           </div>
