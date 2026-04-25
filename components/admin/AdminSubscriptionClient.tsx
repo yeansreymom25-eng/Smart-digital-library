@@ -45,6 +45,21 @@ const notes = [
   { title: "Activation", text: "Your selected features become available once the plan is confirmed." },
 ];
 
+const planRank: Record<Plan["name"], number> = {
+  Normal: 1,
+  Pro: 2,
+  Premium: 3,
+};
+
+function getPlanActionLabel(plan: Plan, activePlan: Plan["name"] | null, isSelected: boolean) {
+  if (activePlan === plan.name) return "Current Plan";
+  if (isSelected) return "Selected";
+  if (!activePlan) return "Choose Plan";
+  return planRank[plan.name] > planRank[activePlan]
+    ? `Upgrade to ${plan.name}`
+    : `Switch to ${plan.name}`;
+}
+
 function PlanIcon({ kind, tone }: { kind: "spark" | "crown" | "bolt"; tone: "lime" | "amber" | "sky" }) {
   const toneClasses = tone === "amber" ? "border-[#d1b4ff] bg-[#f1e7ff] text-[#8a43d6]"
     : tone === "sky" ? "border-[#8bc7ff] bg-[#daf0ff] text-[#3490dc]"
@@ -290,13 +305,7 @@ export default function AdminSubscriptionClient({
                   <div className="px-5 pb-6">
                     <button type="button" onClick={() => handleChoosePlan(plan)}
                       className={`mx-auto block w-full max-w-[160px] rounded-md px-5 py-2 text-sm font-semibold text-white transition ${selectedPlan?.name === plan.name ? "bg-[#255fb4] hover:bg-[#1f549f]" : "bg-[#4794f1] hover:bg-[#327fe0]"}`}>
-                      {activePlan === plan.name
-                        ? "Current Plan"
-                        : selectedPlan?.name === plan.name
-                          ? "Selected"
-                          : hasExistingPlan && plan.name !== activePlan
-                            ? `Upgrade to ${plan.name}`
-                            : "Choose Plan"}
+                      {getPlanActionLabel(plan, activePlan, selectedPlan?.name === plan.name)}
                     </button>
                   </div>
                 </article>

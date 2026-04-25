@@ -185,12 +185,14 @@ function CategoryPieChart({ segments }: { segments: { label: string; value: numb
               key={segment.label}
               className="rounded-[18px] border border-[#dce8fb] bg-[linear-gradient(145deg,#ffffff,#f6faff)] p-4 shadow-[0_12px_24px_rgba(77,152,240,0.08)]"
             >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: segment.color }} />
-                  <p className="text-sm font-semibold text-[#173b73]">{segment.label}</p>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                <div className="grid min-w-0 grid-cols-[14px_minmax(0,1fr)] items-start gap-3">
+                  <span className="mt-1 h-3.5 w-3.5 rounded-full" style={{ backgroundColor: segment.color }} />
+                  <p className="min-w-0 [overflow-wrap:anywhere] text-sm font-semibold leading-5 text-[#173b73]">
+                    {segment.label}
+                  </p>
                 </div>
-                <p className="text-sm font-semibold text-[#2456b6]">{Math.round(segment.fraction * 100)}%</p>
+                <p className="shrink-0 text-right text-sm font-semibold leading-5 text-[#2456b6]">{Math.round(segment.fraction * 100)}%</p>
               </div>
               <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e9eef6]">
                 <div
