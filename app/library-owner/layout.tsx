@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import AdminLayoutShell from "@/components/admin/AdminLayoutShell";
+import { getUsableAdminPlan } from "@/src/lib/adminSubscription";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const cookieStore = await cookies();
@@ -23,7 +24,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         .from("subscriptions")
         .select("plan, status")
         .eq("user_id", user.id)
-        .eq("status", "active")
+        .order("submitted_at", { ascending: false })
+        .limit(1)
         .maybeSingle(),
       supabase
         .from("profiles")
@@ -32,7 +34,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         .maybeSingle(),
     ]);
 
-    if (subscription?.plan) plan = `${subscription.plan as string} Plan`;
+    const usablePlan = getUsableAdminPlan(subscription);
+    if (usablePlan) plan = `${usablePlan} Plan`;
     if (profile?.full_name) ownerName = profile.full_name as string;
     if (profile?.avatar_url) ownerAvatarUrl = profile.avatar_url as string;
   }

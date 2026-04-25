@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getUsableAdminPlan } from "@/src/lib/adminSubscription";
 
 function getPlanLimit(plan: string | null): number {
   if (plan === "Premium") return Infinity;
@@ -26,10 +27,15 @@ export async function POST(request: NextRequest) {
       .from("subscriptions")
       .select("plan, status")
       .eq("user_id", user.id)
-      .eq("status", "active")
+      .order("submitted_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
-    const plan = (sub?.plan as string) ?? null;
+    const plan = getUsableAdminPlan(
+      sub?.plan === "Normal" || sub?.plan === "Pro" || sub?.plan === "Premium"
+        ? { plan: sub.plan, status: sub.status === "active" || sub.status === "pending" || sub.status === "rejected" ? sub.status : "not_selected" }
+        : null
+    );
     const limit = getPlanLimit(plan);
 
     if (limit === 0) {

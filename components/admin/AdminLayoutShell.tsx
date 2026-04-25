@@ -16,7 +16,7 @@ export default function AdminLayoutShell({
   ownerAvatarUrl: string;
 }) {
   const pathname = usePathname();
-  const isSubscriptionOnboarding = pathname === "/library-owner/subscription";
+  const isSubscriptionOnboarding = pathname === "/library-owner/subscription" && plan === "No Plan";
 
   if (isSubscriptionOnboarding) {
     return (

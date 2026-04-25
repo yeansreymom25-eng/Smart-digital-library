@@ -66,9 +66,11 @@ function PlanIcon({ kind, tone }: { kind: "spark" | "crown" | "bolt"; tone: "lim
 export default function AdminSubscriptionClient({
   userId,
   initialSubscription,
+  isOnboarding,
 }: {
   userId: string;
   initialSubscription: AdminSubscription;
+  isOnboarding: boolean;
 }) {
   const router = useRouter();
   const [isQrOpen, setIsQrOpen] = useState(false);
@@ -85,16 +87,29 @@ export default function AdminSubscriptionClient({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
   const currentPlan = initialSubscription.plan;
-  const hasExistingPlan = Boolean(initialSubscription.plan);
-  const isCurrentPlanSelected = selectedPlan?.name === currentPlan;
+  const activePlan =
+    initialSubscription.status === "active"
+      ? currentPlan
+      : currentPlan && initialSubscription.status !== "not_selected"
+        ? "Normal"
+        : null;
+  const hasExistingPlan = Boolean(activePlan);
+  const isCurrentPlanSelected = selectedPlan?.name === activePlan;
+  const pageEyebrow = isOnboarding ? "Library Owner Onboarding" : "Subscription";
+  const pageTitle = isOnboarding
+    ? "Subscribe to Manage Your Digital Library"
+    : "Manage Your Library Plan";
+  const pageDescription = isOnboarding
+    ? "Choose the perfect plan to access powerful features for managing your smart digital library"
+    : "Review your current plan, compare available features, and submit an upgrade request when your library is ready.";
 
   const statusCopy =
     subscriptionStatus === "active"
       ? {
           badge: "Active plan",
           tone: "border-[#9fe0b2] bg-[#edf9f0] text-[#2f7d42]",
-          body: currentPlan
-            ? `Your current subscription is ${currentPlan} Plan. You can keep it or choose another plan below to submit a change.`
+          body: activePlan
+            ? `Your current subscription is ${activePlan} Plan. You can keep it or choose another plan below to submit a change.`
             : "Your subscription is active.",
         }
       : subscriptionStatus === "pending"
@@ -102,7 +117,7 @@ export default function AdminSubscriptionClient({
             badge: "Pending review",
             tone: "border-[#bfd8ff] bg-[#f2f7ff] text-[#2456b6]",
             body: currentPlan
-              ? `Your ${currentPlan} Plan request is waiting for approval. You can still review plans below and prepare a different choice if needed.`
+              ? `Your ${currentPlan} Plan request is waiting for approval. Your current usable plan remains ${activePlan ?? "Normal"} Plan until approval.`
               : "Your subscription request is waiting for approval.",
           }
         : subscriptionStatus === "rejected"
@@ -133,12 +148,18 @@ export default function AdminSubscriptionClient({
     if (!selectedPlan || !userId) return;
     setIsSubmitting(true);
     try {
-      await fetch("/api/admin/subscription", {
+      const response = await fetch("/api/admin/subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, plan: "Normal", status: "active" }),
       });
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(result?.error ?? "Unable to update subscription.");
+      }
       router.push("/library-owner/dashboard");
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Unable to update subscription.");
     } finally {
       setIsSubmitting(false);
     }
@@ -174,7 +195,7 @@ export default function AdminSubscriptionClient({
         }
       }
 
-      await fetch("/api/admin/subscription", {
+      const response = await fetch("/api/admin/subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -186,6 +207,10 @@ export default function AdminSubscriptionClient({
           paymentNote: paymentNote.trim(),
         }),
       });
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(result?.error ?? "Unable to submit payment proof.");
+      }
       setSubscriptionStatus("pending");
       setPaymentSubmitted(true);
     } catch (err) {
@@ -197,38 +222,40 @@ export default function AdminSubscriptionClient({
 
   return (
     <>
-      <section className="min-h-screen w-full rounded-none border-0 bg-[radial-gradient(circle_at_top_left,_rgba(191,219,254,0.94),_rgba(255,255,255,0.98)_52%,_rgba(248,250,255,1)_100%)] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
-        <div className="min-h-[calc(100vh-2rem)] rounded-none border-0 bg-white/18 px-4 py-4 sm:px-6 lg:px-8">
-          <header className="flex flex-col gap-5 border-b border-[#b4d1ff] pb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-[16px] border-2 border-[#7db5ff] bg-[linear-gradient(135deg,#4f8ef5,#98c5ff)] shadow-[0_14px_28px_rgba(79,142,245,0.18)]">
-                <div className="grid grid-cols-3 gap-[2px]">
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <span key={i} className={`h-2.5 w-2.5 rounded-[2px] ${i % 2 === 0 ? "bg-white" : "bg-[#dff0ff]"}`} />
-                  ))}
+      <section className={`${isOnboarding ? "min-h-screen rounded-none border-0 bg-[radial-gradient(circle_at_top_left,_rgba(191,219,254,0.94),_rgba(255,255,255,0.98)_52%,_rgba(248,250,255,1)_100%)] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6" : "w-full"} w-full`}>
+        <div className={isOnboarding ? "min-h-[calc(100vh-2rem)] rounded-none border-0 bg-white/18 px-4 py-4 sm:px-6 lg:px-8" : "w-full"}>
+          {isOnboarding ? (
+            <header className="flex flex-col gap-5 border-b border-[#b4d1ff] pb-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-[16px] border-2 border-[#7db5ff] bg-[linear-gradient(135deg,#4f8ef5,#98c5ff)] shadow-[0_14px_28px_rgba(79,142,245,0.18)]">
+                  <div className="grid grid-cols-3 gap-[2px]">
+                    {Array.from({ length: 9 }).map((_, i) => (
+                      <span key={i} className={`h-2.5 w-2.5 rounded-[2px] ${i % 2 === 0 ? "bg-white" : "bg-[#dff0ff]"}`} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-black leading-none text-slate-950">Smart Digital</p>
+                  <p className="text-sm font-black leading-none text-slate-950">Library</p>
                 </div>
               </div>
-              <div>
-                <p className="text-sm font-black leading-none text-slate-950">Smart Digital</p>
-                <p className="text-sm font-black leading-none text-slate-950">Library</p>
+              <div className="rounded-2xl border-2 border-[#d7ccc0] bg-[#eae4dc]/80 p-2 shadow-[0_12px_24px_rgba(178,169,160,0.1)]">
+                <div className="grid grid-cols-3 gap-2 text-xs font-medium text-slate-500 sm:text-sm">
+                  <Link href="/" className="rounded-xl bg-[#dbd4cb] px-5 py-3 text-center text-slate-700 transition hover:bg-[#d2cbc2]">Home</Link>
+                  <Link href="/Log_in" className="rounded-xl px-5 py-3 text-center transition hover:bg-white/45 hover:text-slate-700">Login</Link>
+                  <Link href="/Sign_up" className="rounded-xl px-5 py-3 text-center transition hover:bg-white/45 hover:text-slate-700">Sign-up</Link>
+                </div>
               </div>
-            </div>
-            <div className="rounded-2xl border-2 border-[#d7ccc0] bg-[#eae4dc]/80 p-2 shadow-[0_12px_24px_rgba(178,169,160,0.1)]">
-              <div className="grid grid-cols-3 gap-2 text-xs font-medium text-slate-500 sm:text-sm">
-                <Link href="/" className="rounded-xl bg-[#dbd4cb] px-5 py-3 text-center text-slate-700 transition hover:bg-[#d2cbc2]">Home</Link>
-                <Link href="/Log_in" className="rounded-xl px-5 py-3 text-center transition hover:bg-white/45 hover:text-slate-700">Login</Link>
-                <Link href="/Sign_up" className="rounded-xl px-5 py-3 text-center transition hover:bg-white/45 hover:text-slate-700">Sign-up</Link>
-              </div>
-            </div>
-          </header>
+            </header>
+          ) : null}
 
-          <div className="px-2 py-12 sm:px-4 sm:py-16 lg:px-8">
+          <div className={isOnboarding ? "px-2 py-12 sm:px-4 sm:py-16 lg:px-8" : "py-0"}>
             <div className="mx-auto max-w-4xl text-center">
               <p className="inline-flex rounded-full border border-[#c9dbfb] bg-white/70 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6789b0]">
-                Library Owner Onboarding
+                {pageEyebrow}
               </p>
-              <h1 className="mt-6 text-[2.5rem] font-bold leading-none text-[#173b73]">Subscribe to Manage Your Digital Library</h1>
-              <p className="mx-auto mt-2 max-w-3xl text-base leading-7 text-[#4d6691]">Choose the perfect plan to access powerful features for managing your smart digital library</p>
+              <h1 className="mt-6 text-[2.5rem] font-bold leading-none text-[#173b73]">{pageTitle}</h1>
+              <p className="mx-auto mt-2 max-w-3xl text-base leading-7 text-[#4d6691]">{pageDescription}</p>
             </div>
 
             <div className="mx-auto mt-14 grid w-full max-w-[1280px] gap-8 xl:grid-cols-3 xl:items-start">
@@ -263,7 +290,13 @@ export default function AdminSubscriptionClient({
                   <div className="px-5 pb-6">
                     <button type="button" onClick={() => handleChoosePlan(plan)}
                       className={`mx-auto block w-full max-w-[160px] rounded-md px-5 py-2 text-sm font-semibold text-white transition ${selectedPlan?.name === plan.name ? "bg-[#255fb4] hover:bg-[#1f549f]" : "bg-[#4794f1] hover:bg-[#327fe0]"}`}>
-                      {selectedPlan?.name === plan.name ? "Selected" : currentPlan === plan.name && subscriptionStatus === "active" ? "Current Plan" : "Choose Plan"}
+                      {activePlan === plan.name
+                        ? "Current Plan"
+                        : selectedPlan?.name === plan.name
+                          ? "Selected"
+                          : hasExistingPlan && plan.name !== activePlan
+                            ? `Upgrade to ${plan.name}`
+                            : "Choose Plan"}
                     </button>
                   </div>
                 </article>
@@ -275,7 +308,7 @@ export default function AdminSubscriptionClient({
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em]">{statusCopy.badge}</p>
                   <h2 className="mt-2 text-2xl font-black text-slate-950">
-                    {currentPlan ? `${currentPlan} Plan` : "Choose your first plan"}
+                    {activePlan ? `${activePlan} Plan` : "Choose your first plan"}
                   </h2>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{statusCopy.body}</p>
                 </div>
@@ -311,7 +344,7 @@ export default function AdminSubscriptionClient({
                           ? "Switching to the Normal plan will apply directly because it does not require payment proof."
                           : "You can continue directly because the Normal plan does not require payment proof."
                         : hasExistingPlan && !isCurrentPlanSelected
-                          ? `You are preparing to change from ${currentPlan} to ${selectedPlan.name}. This paid plan still requires QR payment and proof upload before the change can be activated.`
+                          ? `You are preparing to change from ${activePlan ?? "Normal"} to ${selectedPlan.name}. This paid plan still requires QR payment and proof upload before the change can be activated.`
                           : "This paid plan requires QR payment and proof upload before advanced features are activated."}
                     </p>
                   </div>

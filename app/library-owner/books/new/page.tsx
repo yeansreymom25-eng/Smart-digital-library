@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import BookRecordForm from "@/components/admin/BookRecordForm";
 import type { AdminCategory } from "@/src/lib/adminCategories";
 import Link from "next/link";
+import { getUsableAdminPlan } from "@/src/lib/adminSubscription";
 
 function getPlanLimit(plan: string | null): number {
   if (plan === "Premium") return Infinity;
@@ -26,10 +27,15 @@ export default async function NewBookPage() {
     .from("subscriptions")
     .select("plan, status")
     .eq("user_id", user?.id ?? "")
-    .eq("status", "active")
+    .order("submitted_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  const plan = (sub?.plan as string) ?? null;
+  const plan = getUsableAdminPlan(
+    sub?.plan === "Normal" || sub?.plan === "Pro" || sub?.plan === "Premium"
+      ? { plan: sub.plan, status: sub.status === "active" || sub.status === "pending" || sub.status === "rejected" ? sub.status : "not_selected" }
+      : null
+  );
   const limit = getPlanLimit(plan);
 
   // Count only THIS admin's books

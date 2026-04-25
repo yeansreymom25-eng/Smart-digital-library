@@ -51,6 +51,7 @@ export default async function AdminSubscriptionPage() {
     <AdminSubscriptionClient
       userId={user?.id ?? ""}
       initialSubscription={subscription}
+      isOnboarding={!subscription.plan}
     />
   );
 }

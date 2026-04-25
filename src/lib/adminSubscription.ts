@@ -68,6 +68,12 @@ export function getPlanBookLimit(plan: AdminPlanName | null) {
   return 0;
 }
 
+export function getUsableAdminPlan(subscription: Pick<AdminSubscription, "plan" | "status"> | null) {
+  if (!subscription?.plan) return null;
+  if (subscription.status === "active") return subscription.plan;
+  return "Normal";
+}
+
 export function formatPlanLimit(limit: number) {
   return Number.isFinite(limit) ? String(limit) : "Unlimited";
 }

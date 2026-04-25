@@ -10,10 +10,12 @@ import { AUTH_ROUTES, clearPendingSignup, readPendingSignup } from "@/src/lib/au
 import { toFriendlyAuthMessage } from "@/src/lib/authMessages";
 import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
 
-// Helper to get redirect destination based on role
-function getRoleDestination(role: string | undefined): string {
+// Helper to get redirect destination based on role and auth intent
+function getRoleDestination(role: string | undefined, type: "login" | "signup" | "recovery"): string {
   if (role === "super_admin") return "/super-admin/dashboard";
-  if (role === "admin") return "/library-owner/subscription";
+  if (role === "admin") {
+    return type === "signup" ? "/library-owner/subscription" : "/library-owner/dashboard";
+  }
   return "/home";
 }
 
@@ -118,7 +120,7 @@ function OTPVerifyInner() {
 
       const { data: sessionData } = await supabaseClient.auth.getSession();
       const role = sessionData.session?.user?.user_metadata?.role as string | undefined;
-      router.replace(getRoleDestination(role));
+      router.replace(getRoleDestination(role, type));
     }
 
     void handleLinkConfirmation();
@@ -146,7 +148,7 @@ function OTPVerifyInner() {
       return;
     }
 
-    const destination = getRoleDestination(result.role);
+    const destination = getRoleDestination(result.role, type);
     router.push(destination);
   }
 
