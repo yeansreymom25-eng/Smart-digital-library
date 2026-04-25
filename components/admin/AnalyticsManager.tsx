@@ -150,10 +150,10 @@ function CategoryPieChart({ segments }: { segments: { label: string; value: numb
   });
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-center">
-      <div className="flex justify-center">
-        <div className="relative flex h-[280px] w-[280px] items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,_rgba(77,152,240,0.12),_rgba(255,255,255,0.98)_56%)]">
-          <svg viewBox="0 0 140 140" className="h-[220px] w-[220px] -rotate-90">
+    <div className="space-y-7">
+      <div className="flex flex-col items-center gap-5 rounded-[24px] border border-[#e1ebfb] bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-5 py-6 shadow-[0_14px_34px_rgba(77,152,240,0.08)] sm:flex-row sm:justify-center sm:px-6">
+        <div className="relative flex h-[240px] w-[240px] shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,_rgba(77,152,240,0.12),_rgba(255,255,255,0.98)_56%)] sm:h-[260px] sm:w-[260px]">
+          <svg viewBox="0 0 140 140" className="h-[196px] w-[196px] -rotate-90 sm:h-[210px] sm:w-[210px]">
             <circle cx="70" cy="70" r={radius} fill="none" stroke="#e8eef8" strokeWidth="18" />
             {ringSegments.map((segment) => (
               <circle
@@ -176,8 +176,15 @@ function CategoryPieChart({ segments }: { segments: { label: string; value: numb
             <p className="mt-2 text-sm text-[#6980a6]">Books tracked</p>
           </div>
         </div>
+        <div className="max-w-[360px] text-center sm:text-left">
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#6b82a8]">Category Snapshot</p>
+          <h3 className="mt-2 text-2xl font-bold leading-tight text-[#173b73]">Catalog balance</h3>
+          <p className="mt-3 text-sm leading-6 text-[#6980a6]">
+            Your strongest categories appear first below, with each card showing its share of the full catalog.
+          </p>
+        </div>
       </div>
-      <div className="grid gap-3 2xl:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         {ringSegments
           .sort((a, b) => b.value - a.value)
           .map((segment) => (
