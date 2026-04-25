@@ -150,7 +150,7 @@ function CategoryPieChart({ segments }: { segments: { label: string; value: numb
   });
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-center">
+    <div className="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-center">
       <div className="flex justify-center">
         <div className="relative flex h-[280px] w-[280px] items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,_rgba(77,152,240,0.12),_rgba(255,255,255,0.98)_56%)]">
           <svg viewBox="0 0 140 140" className="h-[220px] w-[220px] -rotate-90">
@@ -177,7 +177,7 @@ function CategoryPieChart({ segments }: { segments: { label: string; value: numb
           </div>
         </div>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 2xl:grid-cols-2">
         {ringSegments
           .sort((a, b) => b.value - a.value)
           .map((segment) => (
@@ -185,10 +185,10 @@ function CategoryPieChart({ segments }: { segments: { label: string; value: numb
               key={segment.label}
               className="rounded-[18px] border border-[#dce8fb] bg-[linear-gradient(145deg,#ffffff,#f6faff)] p-4 shadow-[0_12px_24px_rgba(77,152,240,0.08)]"
             >
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                <div className="grid min-w-0 grid-cols-[14px_minmax(0,1fr)] items-start gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+                <div className="flex min-w-0 items-start gap-3">
                   <span className="mt-1 h-3.5 w-3.5 rounded-full" style={{ backgroundColor: segment.color }} />
-                  <p className="min-w-0 [overflow-wrap:anywhere] text-sm font-semibold leading-5 text-[#173b73]">
+                  <p className="min-w-0 text-sm font-semibold leading-5 text-[#173b73] [overflow-wrap:break-word]">
                     {segment.label}
                   </p>
                 </div>
