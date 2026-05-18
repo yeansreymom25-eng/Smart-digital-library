@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { ReaderAccountSection } from "@/src/lib/readerAccountStorage";
 import { useLogout } from "@/src/hooks/useLogout";
 
@@ -29,7 +29,7 @@ export default function ReaderAccountShell({
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] px-4 pb-16 pt-36 sm:px-6 sm:pt-40 lg:px-8">
       <div className="mx-auto max-w-[96rem]">
-        <section className="rounded-[2.5rem] border border-white/75 bg-[linear-gradient(135deg,rgba(255,255,255,0.97)_0%,rgba(244,247,252,0.93)_100%)] px-7 py-8 shadow-[0_24px_50px_rgba(15,23,42,0.1)] sm:px-10 sm:py-10">
+        <section className="reader-fade-up rounded-[2.5rem] border border-white/75 bg-[linear-gradient(135deg,rgba(255,255,255,0.97)_0%,rgba(244,247,252,0.93)_100%)] px-7 py-8 shadow-[0_24px_50px_rgba(15,23,42,0.1)] sm:px-10 sm:py-10">
           <div className="flex flex-col gap-6">
             <div className="flex items-start justify-between">
               <div>
@@ -48,7 +48,7 @@ export default function ReaderAccountShell({
               </button>
             </div>
 
-            <div className="relative z-30 inline-flex self-start rounded-[1.5rem] border border-[#e3e8ef] bg-white/95 p-2 shadow-[0_16px_30px_rgba(15,23,42,0.06)]">
+            <div className="reader-pop relative z-30 inline-flex self-start rounded-[1.5rem] border border-[#e3e8ef] bg-white/95 p-2 shadow-[0_16px_30px_rgba(15,23,42,0.06)]" style={{ "--motion-delay": "80ms" } as CSSProperties}>
               {sectionLinks.map((section) => {
                 const active =
                   activeSection === section.key ||
@@ -61,10 +61,10 @@ export default function ReaderAccountShell({
                     onClick={() => {
                       if (!active) router.push(section.href);
                     }}
-                    className={`rounded-[1rem] px-5 py-3 text-sm font-semibold tracking-[-0.01em] transition sm:px-6 ${
+                    className={`rounded-[1rem] px-5 py-3 text-sm font-semibold tracking-[-0.01em] transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-6 ${
                       active
                         ? "bg-[#202532] text-white shadow-[0_12px_24px_rgba(32,37,50,0.18)]"
-                        : "text-[#6b7586] hover:bg-[#f7f9fc] hover:text-[#202532]"
+                        : "text-[#6b7586] hover:-translate-y-0.5 hover:bg-[#f7f9fc] hover:text-[#202532]"
                     }`}
                     aria-pressed={active}
                   >
@@ -76,7 +76,9 @@ export default function ReaderAccountShell({
           </div>
         </section>
 
-        <div className="mt-8">{children}</div>
+        <div className="reader-fade-up mt-8" style={{ "--motion-delay": "120ms" } as CSSProperties}>
+          {children}
+        </div>
       </div>
     </main>
   );

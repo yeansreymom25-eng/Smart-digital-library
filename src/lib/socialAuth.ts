@@ -6,7 +6,7 @@ import {
   type SocialAuthIntent,
 } from "@/src/lib/authFlow";
 import { getClientAppOrigin } from "@/src/lib/siteUrl";
-import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
+import { getSupabaseBrowserSSR } from "@/src/lib/supabaseBrowserSSR";
 
 export type SocialProvider = "google" | "apple";
 
@@ -14,7 +14,7 @@ export async function signInWithSocialProvider(
   provider: SocialProvider,
   intent: SocialAuthIntent = "login"
 ) {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = getSupabaseBrowserSSR();
 
   if (!supabase) {
     throw new Error(

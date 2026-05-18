@@ -77,7 +77,7 @@ export default function CategoriesManager({ initialCategories = [] }: { initialC
       }));
 
       setCategories(prev => [...prev, ...newCats]);
-      setSeedMsg(`✅ Added ${newCats.length} default categories!`);
+      setSeedMsg(`Added ${newCats.length} default categories successfully.`);
       setTimeout(() => setSeedMsg(""), 3000);
     } catch (err) {
       setSeedMsg(err instanceof Error ? err.message : "Failed to seed categories.");
@@ -142,7 +142,7 @@ export default function CategoriesManager({ initialCategories = [] }: { initialC
               disabled={isSeeding}
               className="rounded-[10px] border border-[#4d98f0] bg-white px-6 py-3 text-base font-semibold text-[#4d98f0] transition hover:bg-[#eef5ff] disabled:opacity-50"
             >
-              {isSeeding ? "Adding…" : "⚡ Add Default Categories"}
+              {isSeeding ? "Adding…" : "Add Default Categories"}
             </button>
 
           <Link
@@ -155,7 +155,7 @@ export default function CategoriesManager({ initialCategories = [] }: { initialC
       </div>
 
       {seedMsg && (
-        <div className={`rounded-[10px] border px-4 py-3 text-sm font-medium ${seedMsg.startsWith("✅") ? "border-[#d8f0d1] bg-[#f6fff3] text-[#3d7f2f]" : "border-[#fecaca] bg-[#fff5f5] text-[#991b1b]"}`}>
+        <div className={`rounded-[10px] border px-4 py-3 text-sm font-medium ${seedMsg.startsWith("Added ") ? "border-[#d8f0d1] bg-[#f6fff3] text-[#3d7f2f]" : "border-[#fecaca] bg-[#fff5f5] text-[#991b1b]"}`}>
           {seedMsg}
         </div>
       )}

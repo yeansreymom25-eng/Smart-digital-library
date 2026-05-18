@@ -114,7 +114,7 @@ function UploadButton({
         </div>
       )}
       {currentUrl && !isImage && (
-        <p className="text-xs text-green-600">✅ File uploaded successfully</p>
+        <p className="text-xs text-green-600">File uploaded successfully.</p>
       )}
     </div>
   );
@@ -142,7 +142,7 @@ export default function BookRecordForm({
 
   const requiresPaymentQr = accessType !== "Free";
 
-  const [allCategories, setAllCategories] = useState<AdminCategory[]>(initialCategories);
+  const [allCategories] = useState<AdminCategory[]>(initialCategories);
 
   const availableCategories = useMemo(
     () => allCategories.filter((item) => item.libraryType === libraryType),

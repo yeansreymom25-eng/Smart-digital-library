@@ -61,7 +61,9 @@ export default async function NewBookPage() {
   if (hasNoPlan || isLimitReached) {
     return (
       <section className="flex min-h-[calc(100vh-1.5rem)] flex-col items-center justify-center rounded-[18px] border border-[#d8e6fb] bg-white p-8 shadow-[0_24px_60px_rgba(15,23,42,0.12)] text-center">
-        <div className="text-6xl">{hasNoPlan ? "🔒" : "📚"}</div>
+        <div className="inline-flex min-h-20 min-w-20 items-center justify-center rounded-full bg-[#eef5ff] px-6 text-sm font-semibold uppercase tracking-[0.18em] text-[#2456b6]">
+          {hasNoPlan ? "Plan" : "Books"}
+        </div>
         <h1 className="mt-6 text-3xl font-bold text-[#173b73]">
           {hasNoPlan ? "No Active Plan" : "Book Limit Reached"}
         </h1>
@@ -91,7 +93,7 @@ export default async function NewBookPage() {
     <section className="min-h-[calc(100vh-1.5rem)]">
       <div className="mb-4 rounded-[10px] border border-[#c8dcff] bg-[#eef5ff] px-4 py-3">
         <p className="text-sm text-[#2456b6]">
-          📚 <span className="font-semibold">{plan} Plan</span> — {currentCount} / {limit === Infinity ? "Unlimited" : limit} books used
+          <span className="font-semibold">{plan} Plan</span> — {currentCount} / {limit === Infinity ? "Unlimited" : limit} books used
         </p>
       </div>
       <BookRecordForm mode="create" initialCategories={categories} />

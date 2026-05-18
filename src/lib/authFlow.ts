@@ -7,7 +7,7 @@ export const AUTH_ROUTES = {
   forgotPassword: "/OTP_Request",
   setNewPassword: "/Setnew_Password",
   otpVerify: "/otp-verify",
-  oauthCallback: "/oauth-callback",
+  oauthCallback: "/auth/callback",
   dashboard: "/home",
 } as const;
 

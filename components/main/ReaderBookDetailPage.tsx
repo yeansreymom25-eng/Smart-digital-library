@@ -152,7 +152,7 @@ export default function ReaderBookDetailPage({
     }
 
     void checkAccess();
-  }, [book.id]);
+  }, [book.id, userId]);
 
   const currentPrice = book.currentPrice ?? book.originalPrice ?? 0;
   const rentPrice = useMemo(() => Number((currentPrice * 0.15).toFixed(2)), [currentPrice]);
@@ -390,17 +390,17 @@ export default function ReaderBookDetailPage({
               {/* Access status banners */}
               {accessStatus === "approved" && (
                 <div className="rounded-[1.4rem] border border-[#d8f0d1] bg-[#f6fff3] px-5 py-4 text-[#3d7f2f] shadow-[0_12px_20px_rgba(95,174,77,0.08)]">
-                  ✅ You have access to this book!
+                  You have access to this book.
                 </div>
               )}
               {accessStatus === "pending" && (
                 <div className="rounded-[1.4rem] border border-[#fde68a] bg-[#fffbeb] px-5 py-4 text-[#92400e]">
-                  ⏳ Your payment is pending admin approval. You'll get access once verified.
+                  Your payment is pending admin approval. You&apos;ll get access once verified.
                 </div>
               )}
               {accessStatus === "rejected" && (
                 <div className="rounded-[1.4rem] border border-[#fecaca] bg-[#fff5f5] px-5 py-4 text-[#991b1b]">
-                  ❌ Your previous payment was rejected. Please try again.
+                  Your previous payment was rejected. Please try again.
                 </div>
               )}
 
@@ -569,7 +569,7 @@ export default function ReaderBookDetailPage({
                         className="block w-full rounded-[1rem] border border-[#dde3ec] bg-white px-4 py-3 text-sm text-[#5d6777]"
                       />
                       {proofFileName && (
-                        <p className="text-xs text-emerald-600">✅ {proofFileName} selected</p>
+                        <p className="text-xs text-emerald-600">{proofFileName} selected</p>
                       )}
                     </label>
                   </>

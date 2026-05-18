@@ -333,7 +333,7 @@ export default function TransactionsManager({
 
       {!pendingTransactions.length && transactions.length > 0 ? (
         <section className="rounded-[10px] border border-[#d8e6fb] bg-[#f8fbff] px-6 py-4 text-sm text-[#5c7297]">
-          ✅ All pending payments have been reviewed.
+          All pending payments have been reviewed.
         </section>
       ) : null}
     </section>

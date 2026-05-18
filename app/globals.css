@@ -122,8 +122,62 @@ body {
 @keyframes reader-page-swap {
   0% {
     opacity: 0;
-    transform: translate3d(0, 26px, 0) scale(0.992);
-    filter: blur(12px);
+    transform: translate3d(0, 14px, 0) scale(0.994);
+    filter: blur(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes reader-fade-up {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+    filter: blur(6px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes reader-pop {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.985);
+    filter: blur(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes reader-overlay-fade {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(14px);
+  }
+}
+
+@keyframes reader-sheet-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.988);
+    filter: blur(10px);
   }
 
   100% {
@@ -139,6 +193,41 @@ body {
 }
 
 .reader-page-swap {
-  animation: reader-page-swap 880ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: reader-page-swap 760ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center top;
   will-change: transform, opacity, filter;
+}
+
+.reader-fade-up {
+  animation: reader-fade-up 820ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--motion-delay, 0ms);
+  will-change: transform, opacity, filter;
+}
+
+.reader-pop {
+  animation: reader-pop 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--motion-delay, 0ms);
+  transform-origin: center top;
+  will-change: transform, opacity, filter;
+}
+
+.reader-overlay-fade {
+  animation: reader-overlay-fade 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, backdrop-filter;
+}
+
+.reader-sheet {
+  animation: reader-sheet-enter 860ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center top;
+  will-change: transform, opacity, filter;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-page-swap,
+  .reader-fade-up,
+  .reader-pop,
+  .reader-overlay-fade,
+  .reader-sheet {
+    animation: none !important;
+  }
 }

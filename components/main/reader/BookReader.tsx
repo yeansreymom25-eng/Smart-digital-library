@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReaderToolbar from "@/components/main/reader/ReaderToolbar";
+import PdfBookSpread from "@/components/main/reader/PdfBookSpread";
 import ReaderSpread from "@/components/main/reader/ReaderSpread";
 import type { ReaderBookDetail } from "@/src/lib/readerBookDetails";
 import type { ReaderContentPage } from "@/src/lib/readerBookContent";
@@ -37,6 +38,8 @@ export default function BookReader({
 
   const [fullscreen, setFullscreen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentPdfPage, setCurrentPdfPage] = useState(1);
+  const [pdfPageCount, setPdfPageCount] = useState(0);
 
   // Use isUnlocked prop from server — no more localStorage
   const unlocked = isUnlocked || book.access === "free";
@@ -46,6 +49,13 @@ export default function BookReader({
 
   const visiblePages = useMemo(() => (unlocked ? pages : pages.slice(0, 2)), [pages, unlocked]);
   const step = desktop ? 2 : 1;
+  const maxPdfPage = useMemo(() => {
+    if (!pdfPageCount) {
+      return currentPdfPage;
+    }
+
+    return desktop ? Math.max(1, pdfPageCount - 1) : pdfPageCount;
+  }, [currentPdfPage, desktop, pdfPageCount]);
   const displayIndex = useMemo(() => {
     const aligned = desktop ? currentIndex - (currentIndex % 2) : currentIndex;
     const maxIndex = Math.max(0, visiblePages.length - step);
@@ -65,10 +75,18 @@ export default function BookReader({
     function handleKeydown(event: KeyboardEvent) {
       if (event.key === "ArrowRight") {
         event.preventDefault();
+        if (showPdfReader) {
+          setCurrentPdfPage((previous) => Math.min(previous + step, maxPdfPage));
+          return;
+        }
         setCurrentIndex((previous) => Math.min(previous + step, Math.max(0, visiblePages.length - step)));
       }
       if (event.key === "ArrowLeft") {
         event.preventDefault();
+        if (showPdfReader) {
+          setCurrentPdfPage((previous) => Math.max(previous - step, 1));
+          return;
+        }
         setCurrentIndex((previous) => Math.max(previous - step, 0));
       }
       if (event.key.toLowerCase() === "f") {
@@ -79,7 +97,7 @@ export default function BookReader({
 
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
-  }, [step, visiblePages.length]);
+  }, [maxPdfPage, showPdfReader, step, visiblePages.length]);
 
   useEffect(() => {
     function syncFullscreen() {
@@ -90,17 +108,27 @@ export default function BookReader({
   }, []);
 
   function goNext() {
+    if (showPdfReader) {
+      setCurrentPdfPage((previous) => Math.min(previous + step, maxPdfPage));
+      return;
+    }
     setCurrentIndex((previous) => Math.min(previous + step, Math.max(0, visiblePages.length - step)));
   }
 
   function goPrevious() {
+    if (showPdfReader) {
+      setCurrentPdfPage((previous) => Math.max(previous - step, 1));
+      return;
+    }
     setCurrentIndex((previous) => Math.max(previous - step, 0));
   }
 
   const leftPage = visiblePages[displayIndex];
   const rightPage = desktop ? visiblePages[displayIndex + 1] : undefined;
   const pageLabel = showPdfReader
-    ? "Full PDF"
+    ? desktop
+      ? `Pages ${currentPdfPage}-${Math.min(currentPdfPage + 1, pdfPageCount || currentPdfPage + 1)}${pdfPageCount ? ` of ${pdfPageCount}` : ""}`
+      : `Page ${currentPdfPage}${pdfPageCount ? ` of ${pdfPageCount}` : ""}`
     : desktop
       ? `Pages ${displayIndex + 1}-${Math.min(displayIndex + 2, visiblePages.length)} of ${visiblePages.length}`
       : `Page ${displayIndex + 1} of ${visiblePages.length}`;
@@ -180,10 +208,12 @@ export default function BookReader({
                 </div>
 
                 <div className="bg-[#0f1420] p-3 sm:p-4">
-                  <iframe
-                    src={`${pdfUrl}#toolbar=1&navpanes=0&view=FitH`}
-                    title={`${book.title} PDF reader`}
-                    className="h-[78vh] w-full rounded-[1.4rem] border border-white/10 bg-white"
+                  <PdfBookSpread
+                    pdfUrl={pdfUrl}
+                    currentPage={currentPdfPage}
+                    desktop={desktop}
+                    title={book.title}
+                    onPageCountChange={setPdfPageCount}
                   />
                 </div>
               </section>

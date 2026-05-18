@@ -46,7 +46,7 @@ function ChangeNameCard() {
       {open && (
         <div className="mt-4 grid gap-3">
           {status === "success" ? (
-            <div className="rounded-[1rem] border border-[#d8f0d1] bg-[#f6fff3] px-4 py-3 text-sm font-medium text-[#3d7f2f]">✅ Name updated successfully!</div>
+            <div className="rounded-[1rem] border border-[#d8f0d1] bg-[#f6fff3] px-4 py-3 text-sm font-medium text-[#3d7f2f]">Name updated successfully.</div>
           ) : (
             <>
               <input type="text" placeholder="New display name" value={name} onChange={(e) => setName(e.target.value)}
@@ -107,7 +107,7 @@ function ChangeEmailCard() {
         <div className="mt-4 grid gap-3">
           {status === "success" ? (
             <div className="rounded-[1rem] border border-[#d8f0d1] bg-[#f6fff3] px-4 py-3 text-sm font-medium text-[#3d7f2f]">
-              ✅ Confirmation sent to <strong>{email}</strong>. Check your inbox to confirm the change.
+              Confirmation sent to <strong>{email}</strong>. Check your inbox to confirm the change.
             </div>
           ) : (
             <>
@@ -182,7 +182,7 @@ function PasswordSection() {
         <div className="mt-4 grid gap-3">
           {status === "success" ? (
             <div className="rounded-[1rem] border border-[#d8f0d1] bg-[#f6fff3] px-4 py-3 text-sm font-medium text-[#3d7f2f]">
-              ✅ Password changed successfully!
+              Password changed successfully.
             </div>
           ) : (
             <>

@@ -159,7 +159,7 @@ export default function SuperAdminDashboard({ libraryOwners }: { libraryOwners: 
                           </button>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-400 capitalize">{owner.status === "active" ? "✅ Approved" : owner.status === "rejected" ? "❌ Rejected" : "—"}</span>
+                        <span className="text-xs text-slate-400 capitalize">{owner.status === "active" ? "Approved" : owner.status === "rejected" ? "Rejected" : "—"}</span>
                       )}
                     </td>
                   </tr>

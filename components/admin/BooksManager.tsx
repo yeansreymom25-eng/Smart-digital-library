@@ -113,7 +113,7 @@ export default function BooksManager({ initialBooks = [] }: { initialBooks?: Adm
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search books by title, author, or category..."
+            placeholder="Search"
             className="w-full border-0 bg-transparent text-base text-slate-700 outline-none placeholder:text-base placeholder:text-slate-400"
           />
         </div>
