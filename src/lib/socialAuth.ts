@@ -26,7 +26,9 @@ export async function signInWithSocialProvider(
     typeof window !== "undefined"
       ? (() => {
           storeSocialAuthIntent(intent);
-          return `${getClientAppOrigin()}${AUTH_ROUTES.oauthCallback}`;
+          const url = new URL(`${getClientAppOrigin()}${AUTH_ROUTES.oauthCallback}`);
+          url.searchParams.set("intent", intent);
+          return url.toString();
         })()
       : undefined;
 
