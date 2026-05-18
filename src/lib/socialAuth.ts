@@ -3,10 +3,12 @@
 import { storeSocialAuthIntent, type SocialAuthIntent } from "@/src/lib/authFlow";
 
 export type SocialProvider = "google" | "apple";
+export type SocialSignupRole = "user" | "admin";
 
 export async function signInWithSocialProvider(
   provider: SocialProvider,
-  intent: SocialAuthIntent = "login"
+  intent: SocialAuthIntent = "login",
+  role?: SocialSignupRole
 ) {
   if (typeof window === "undefined") {
     return;
@@ -17,5 +19,8 @@ export async function signInWithSocialProvider(
   const url = new URL("/auth/social", window.location.origin);
   url.searchParams.set("provider", provider);
   url.searchParams.set("intent", intent);
+  if (intent === "signup" && role) {
+    url.searchParams.set("role", role);
+  }
   window.location.assign(url.toString());
 }

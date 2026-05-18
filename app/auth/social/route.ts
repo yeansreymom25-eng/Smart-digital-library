@@ -4,7 +4,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { SocialAuthIntent } from "@/src/lib/authFlow";
 import { AUTH_ROUTES } from "@/src/lib/authFlow";
 import { getRequestAppOrigin } from "@/src/lib/siteUrl";
-import type { SocialProvider } from "@/src/lib/socialAuth";
+import type { SocialProvider, SocialSignupRole } from "@/src/lib/socialAuth";
 
 function getProvider(value: string | null): SocialProvider | null {
   return value === "google" || value === "apple" ? value : null;
@@ -14,11 +14,16 @@ function getIntent(value: string | null): SocialAuthIntent {
   return value === "signup" ? "signup" : "login";
 }
 
+function getRole(value: string | null): SocialSignupRole {
+  return value === "admin" ? "admin" : "user";
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const origin = getRequestAppOrigin(request);
   const provider = getProvider(requestUrl.searchParams.get("provider"));
   const intent = getIntent(requestUrl.searchParams.get("intent"));
+  const role = getRole(requestUrl.searchParams.get("role"));
 
   if (!provider) {
     return NextResponse.redirect(new URL(AUTH_ROUTES.login, origin));
@@ -42,6 +47,9 @@ export async function GET(request: NextRequest) {
 
   const callbackUrl = new URL(`${origin}${AUTH_ROUTES.oauthCallback}`);
   callbackUrl.searchParams.set("intent", intent);
+  if (intent === "signup") {
+    callbackUrl.searchParams.set("role", role);
+  }
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
