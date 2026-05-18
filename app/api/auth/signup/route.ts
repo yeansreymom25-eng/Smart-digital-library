@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { canUseLibraryOwnerRole, normalizeAuthEmail, resolveSignupRole } from "@/src/lib/authRoles";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +19,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const cleanEmail = normalizeAuthEmail(email);
+    const signupRole = resolveSignupRole(cleanEmail, role);
+
+    if (role === "admin" && !canUseLibraryOwnerRole(cleanEmail)) {
+      return NextResponse.json(
+        { error: "Only the registered library owner email can create a library owner account." },
+        { status: 403 }
+      );
+    }
+
     const supabaseAdmin = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -27,10 +38,10 @@ export async function POST(request: NextRequest) {
     // Create user with password already set and email confirmed
     const { data: createData, error: createError } =
       await supabaseAdmin.auth.admin.createUser({
-        email,
+        email: cleanEmail,
         password,
         email_confirm: true, // ← password is set properly now
-        user_metadata: { full_name: fullName, role },
+        user_metadata: { full_name: fullName, role: signupRole },
       });
 
     if (createError || !createData.user) {
@@ -43,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Create profile row
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .insert({ id: createData.user.id, full_name: fullName, role });
+      .insert({ id: createData.user.id, full_name: fullName, role: signupRole });
 
     if (profileError) {
       return NextResponse.json(
@@ -60,7 +71,7 @@ export async function POST(request: NextRequest) {
     );
 
     const { error: otpError } = await supabaseAnon.auth.signInWithOtp({
-      email,
+      email: cleanEmail,
       options: { shouldCreateUser: false },
     });
 

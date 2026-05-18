@@ -3,6 +3,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 
 import { AUTH_ROUTES, type SocialAuthIntent } from "@/src/lib/authFlow";
+import { resolveSignupRole, resolveStoredRole } from "@/src/lib/authRoles";
 import { getSupabaseAdminClient } from "@/src/lib/supabaseAdmin";
 import { getRequestAppOrigin } from "@/src/lib/siteUrl";
 
@@ -67,12 +68,14 @@ async function ensureSocialProfile(
 
   const existingRole =
     existingProfile?.role === "admin" || existingProfile?.role === "super_admin"
-      ? existingProfile.role
+      ? resolveStoredRole(user.email, existingProfile.role)
       : existingProfile?.role === "user"
         ? "user"
         : null;
 
-  const role = existingRole ?? (intent === "signup" && isFreshOAuthSignup(user) ? requestedRole : "user");
+  const allowedRequestedRole = resolveSignupRole(user.email, requestedRole);
+  const role =
+    existingRole ?? (intent === "signup" && isFreshOAuthSignup(user) ? allowedRequestedRole : "user");
   const fullName = getDisplayName(user);
 
   if (!existingProfile) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { resolveStoredRole } from "@/src/lib/authRoles";
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get role from user_metadata
-    const role = data.user.user_metadata?.role as string | undefined;
+    const role = resolveStoredRole(data.user.email, data.user.user_metadata?.role as string | undefined);
 
     // Attach role to body so client can redirect correctly
     const finalResponse = NextResponse.json({ success: true, role: role ?? "user" });

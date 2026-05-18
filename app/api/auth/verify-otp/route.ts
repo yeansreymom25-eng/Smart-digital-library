@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { resolveStoredRole } from "@/src/lib/authRoles";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
         .select("role")
         .eq("id", data.user.id)
         .maybeSingle();
-      role = (profile?.role as string) ?? "user";
+      role = resolveStoredRole(data.user.email, profile?.role as string | undefined);
     }
 
     const finalResponse = NextResponse.json({ success: true, role });

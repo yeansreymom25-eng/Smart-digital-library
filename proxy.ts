@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { resolveStoredRole } from "@/src/lib/authRoles";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -46,7 +47,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user) {
-    const role = user.user_metadata?.role as string | undefined;
+    const role = resolveStoredRole(user.email, user.user_metadata?.role as string | undefined);
     const isAdmin = role === "admin";
     const isSuperAdmin = role === "super_admin";
 
