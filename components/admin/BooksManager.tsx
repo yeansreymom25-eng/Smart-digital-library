@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";import type { AdminBook } from "@/src/lib/adminBooks";
+import { useMemo, useState } from "react";
+import type { AdminBook } from "@/src/lib/adminBooks";
+
+type BookTypeFilter = "all" | "english" | "khmer";
 
 function ActionIcon({ type }: { type: "edit" | "view" | "delete" }) {
   const className = type === "delete" ? "h-5 w-5 text-[#ff4d4f]" : "h-5 w-5 text-slate-500";
@@ -51,6 +54,7 @@ function LibraryTypeBadge({ libraryType }: { libraryType: AdminBook["libraryType
 
 export default function BooksManager({ initialBooks = [] }: { initialBooks?: AdminBook[] }) {
   const [search, setSearch] = useState("");
+  const [bookTypeFilter, setBookTypeFilter] = useState<BookTypeFilter>("all");
   const [books, setBooks] = useState<AdminBook[]>(initialBooks);
   const [pendingDelete, setPendingDelete] = useState<AdminBook | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -60,14 +64,26 @@ export default function BooksManager({ initialBooks = [] }: { initialBooks?: Adm
 
   const filteredBooks = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    if (!keyword) return books;
-    return books.filter(
-      (book) =>
+    return books.filter((book) => {
+      const matchesType = bookTypeFilter === "all" || book.libraryType === bookTypeFilter;
+      const matchesSearch =
+        !keyword ||
         book.title.toLowerCase().includes(keyword) ||
         book.author.toLowerCase().includes(keyword) ||
-        book.category.toLowerCase().includes(keyword)
-    );
-  }, [books, search]);
+        book.category.toLowerCase().includes(keyword);
+
+      return matchesType && matchesSearch;
+    });
+  }, [bookTypeFilter, books, search]);
+
+  const bookTypeCounts = useMemo(
+    () => ({
+      all: books.length,
+      english: books.filter((book) => book.libraryType === "english").length,
+      khmer: books.filter((book) => book.libraryType === "khmer").length,
+    }),
+    [books]
+  );
 
   async function handleDeleteConfirm() {
     if (!pendingDelete) return;
@@ -104,6 +120,30 @@ export default function BooksManager({ initialBooks = [] }: { initialBooks?: Adm
       </div>
 
       <section className="rounded-[10px] border border-[#cfcfcf] bg-white p-4 shadow-[0_8px_20px_rgba(132,145,165,0.05)]">
+        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          {([
+            { key: "all", label: "All Books", count: bookTypeCounts.all },
+            { key: "english", label: "English Books", count: bookTypeCounts.english },
+            { key: "khmer", label: "Khmer Books", count: bookTypeCounts.khmer },
+          ] as const).map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setBookTypeFilter(item.key)}
+              className={`flex items-center justify-between gap-3 rounded-[8px] border px-4 py-3 text-left transition ${
+                bookTypeFilter === item.key
+                  ? "border-[#4d98f0] bg-[#eef5ff] text-[#173b73]"
+                  : "border-[#e1e1e1] bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className="text-sm font-semibold">{item.label}</span>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-[#5d78ad]">
+                {item.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center gap-4 rounded-[8px] border border-[#e1e1e1] px-5 py-4">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 text-slate-400">
             <circle cx="11" cy="11" r="6" />
@@ -123,6 +163,11 @@ export default function BooksManager({ initialBooks = [] }: { initialBooks?: Adm
         <section className="rounded-[10px] border border-dashed border-[#cfcfcf] bg-white px-6 py-12 text-center shadow-[0_8px_20px_rgba(132,145,165,0.05)]">
           <p className="text-xl font-semibold text-[#1e3a6d]">No books yet</p>
           <p className="mt-2 text-sm text-slate-500">Add your first book record to start building the library.</p>
+        </section>
+      ) : !filteredBooks.length ? (
+        <section className="rounded-[10px] border border-dashed border-[#cfcfcf] bg-white px-6 py-12 text-center shadow-[0_8px_20px_rgba(132,145,165,0.05)]">
+          <p className="text-xl font-semibold text-[#1e3a6d]">No matching books</p>
+          <p className="mt-2 text-sm text-slate-500">Try another book type or search keyword.</p>
         </section>
       ) : (
         <section className="overflow-hidden rounded-[10px] border border-[#cfcfcf] bg-white shadow-[0_8px_20px_rgba(132,145,165,0.05)]">
