@@ -1,6 +1,11 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import SuperAdminDashboard from "@/components/super-admin/SuperAdminDashboard";
+import {
+  getAdminSubscriptionExpiresAt,
+  getEffectiveAdminSubscriptionStatus,
+  type AdminPlanStatus,
+} from "@/src/lib/adminSubscription";
 
 export default async function SuperAdminDashboardPage() {
   const cookieStore = await cookies();
@@ -31,16 +36,35 @@ export default async function SuperAdminDashboardPage() {
 
   const libraryOwners = (profiles ?? []).map((profile) => {
     const sub = (subscriptions ?? []).find((s) => s.user_id === profile.id);
+    const status = getEffectiveAdminSubscriptionStatus(
+      sub
+        ? {
+            status: sub.status as AdminPlanStatus,
+            submittedAt: (sub.submitted_at as string) ?? null,
+            updatedAt: (sub.updated_at as string) ?? null,
+          }
+        : null
+    );
+    const expiresAt = getAdminSubscriptionExpiresAt(
+      sub
+        ? {
+            status,
+            submittedAt: (sub.submitted_at as string) ?? null,
+            updatedAt: (sub.updated_at as string) ?? null,
+          }
+        : null
+    );
     return {
       id: profile.id as string,
       name: (profile.full_name as string) ?? "Unknown",
       email: emailMap.get(profile.id as string) ?? "",
       plan: (sub?.plan as string) ?? null,
-      status: (sub?.status as string) ?? "not_selected",
+      status,
       proofUrl: (sub?.proof_url as string) ?? "",
       submittedAt: sub?.submitted_at
         ? new Date(sub.submitted_at as string).toLocaleDateString("en-US")
         : "-",
+      expiresAt: expiresAt ? new Date(expiresAt).toLocaleDateString("en-US") : "-",
     };
   });
 

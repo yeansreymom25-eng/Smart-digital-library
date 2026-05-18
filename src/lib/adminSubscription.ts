@@ -5,7 +5,8 @@ export type AdminPlanStatus =
   | "not_selected"
   | "active"
   | "pending"
-  | "rejected";
+  | "rejected"
+  | "expired";
 
 export type AdminSubscription = {
   plan: AdminPlanName | null;
@@ -27,6 +28,53 @@ export const DEFAULT_ADMIN_SUBSCRIPTION: AdminSubscription = {
   updatedAt: null,
 };
 
+export const ADMIN_SUBSCRIPTION_DAYS = 30;
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+export function getAdminSubscriptionExpiresAt(
+  subscription: Pick<AdminSubscription, "status" | "updatedAt" | "submittedAt"> | null
+) {
+  if (!subscription || subscription.status !== "active") {
+    return null;
+  }
+
+  const baseValue = subscription.updatedAt ?? subscription.submittedAt;
+  if (!baseValue) {
+    return null;
+  }
+
+  const baseDate = new Date(baseValue);
+  if (Number.isNaN(baseDate.getTime())) {
+    return null;
+  }
+
+  return addDays(baseDate, ADMIN_SUBSCRIPTION_DAYS).toISOString();
+}
+
+export function getEffectiveAdminSubscriptionStatus(
+  subscription: Pick<AdminSubscription, "status" | "updatedAt" | "submittedAt"> | null
+): AdminPlanStatus {
+  if (!subscription) {
+    return "not_selected";
+  }
+
+  if (subscription.status !== "active") {
+    return subscription.status;
+  }
+
+  const expiresAt = getAdminSubscriptionExpiresAt(subscription);
+  if (!expiresAt) {
+    return "active";
+  }
+
+  return Date.now() > Date.parse(expiresAt) ? "expired" : "active";
+}
+
 function getClient() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,11 +94,12 @@ function rowToSubscription(row: Record<string, unknown> | null): AdminSubscripti
   const status =
     row.status === "active" ||
     row.status === "pending" ||
-    row.status === "rejected"
+    row.status === "rejected" ||
+    row.status === "expired"
       ? (row.status as AdminPlanStatus)
       : "not_selected";
 
-  return {
+  const subscription = {
     plan,
     status,
     proofFileName: (row.proof_url as string) ?? "",
@@ -58,6 +107,11 @@ function rowToSubscription(row: Record<string, unknown> | null): AdminSubscripti
     paymentNote: "",
     submittedAt: (row.submitted_at as string) ?? null,
     updatedAt: (row.updated_at as string) ?? null,
+  };
+
+  return {
+    ...subscription,
+    status: getEffectiveAdminSubscriptionStatus(subscription),
   };
 }
 
@@ -71,6 +125,7 @@ export function getPlanBookLimit(plan: AdminPlanName | null) {
 export function getUsableAdminPlan(subscription: Pick<AdminSubscription, "plan" | "status"> | null) {
   if (!subscription?.plan) return null;
   if (subscription.status === "active") return subscription.plan;
+  if (subscription.status === "expired") return null;
   return "Normal";
 }
 

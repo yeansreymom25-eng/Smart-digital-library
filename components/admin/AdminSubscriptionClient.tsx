@@ -105,7 +105,7 @@ export default function AdminSubscriptionClient({
   const activePlan =
     initialSubscription.status === "active"
       ? currentPlan
-      : currentPlan && initialSubscription.status !== "not_selected"
+      : currentPlan && initialSubscription.status !== "not_selected" && initialSubscription.status !== "expired"
         ? "Normal"
         : null;
   const hasExistingPlan = Boolean(activePlan);
@@ -135,7 +135,13 @@ export default function AdminSubscriptionClient({
               ? `Your ${currentPlan} Plan request is waiting for approval. Your current usable plan remains ${activePlan ?? "Normal"} Plan until approval.`
               : "Your subscription request is waiting for approval.",
           }
-        : subscriptionStatus === "rejected"
+        : subscriptionStatus === "expired"
+          ? {
+              badge: "Plan expired",
+              tone: "border-[#ddd6fe] bg-[#f5f3ff] text-[#6d28d9]",
+              body: "Your plan has expired. Choose a plan below to renew your access or upgrade before returning to the library owner dashboard.",
+            }
+          : subscriptionStatus === "rejected"
           ? {
               badge: "Needs update",
               tone: "border-[#ffd2d2] bg-[#fff4f4] text-[#c93d3d]",

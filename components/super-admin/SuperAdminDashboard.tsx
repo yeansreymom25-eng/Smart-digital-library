@@ -12,12 +12,14 @@ type LibraryOwner = {
   status: string;
   proofUrl: string;
   submittedAt: string;
+  expiresAt: string;
 };
 
 function StatusBadge({ status }: { status: string }) {
   const color =
     status === "active" ? "bg-[#2ec84d]" :
     status === "pending" ? "bg-[#e6a41c]" :
+    status === "expired" ? "bg-[#7c3aed]" :
     status === "rejected" ? "bg-red-500" :
     "bg-slate-400";
   return (
@@ -37,6 +39,7 @@ export default function SuperAdminDashboard({ libraryOwners }: { libraryOwners: 
   const totalOwners = owners.length;
   const activeOwners = owners.filter((o) => o.status === "active").length;
   const pendingOwners = owners.filter((o) => o.status === "pending").length;
+  const expiredOwners = owners.filter((o) => o.status === "expired").length;
 
   async function handleAction(ownerId: string, action: "approve" | "reject") {
     setIsProcessing(ownerId);
@@ -85,7 +88,7 @@ export default function SuperAdminDashboard({ libraryOwners }: { libraryOwners: 
         {[
           { label: "Total Library Owners", value: totalOwners },
           { label: "Active Subscriptions", value: activeOwners },
-          { label: "Pending Approval", value: pendingOwners },
+          { label: "Pending / Expired", value: pendingOwners + expiredOwners },
         ].map((stat) => (
           <div key={stat.label} className="rounded-[10px] bg-[#4d98f0] px-5 py-4 text-white shadow-[0_10px_20px_rgba(77,152,240,0.14)]">
             <p className="text-sm text-white/90">{stat.label}</p>
@@ -111,6 +114,7 @@ export default function SuperAdminDashboard({ libraryOwners }: { libraryOwners: 
                   <th className="px-4 py-4 font-medium">Plan</th>
                   <th className="px-4 py-4 font-medium">Status</th>
                   <th className="px-4 py-4 font-medium">Submitted</th>
+                  <th className="px-4 py-4 font-medium">Expires</th>
                   <th className="px-4 py-4 font-medium">Proof</th>
                   <th className="px-4 py-4 font-medium">Action</th>
                 </tr>
@@ -125,6 +129,7 @@ export default function SuperAdminDashboard({ libraryOwners }: { libraryOwners: 
                       <StatusBadge status={owner.status} />
                     </td>
                     <td className="border-t border-[#cfcfcf] px-4 py-4 text-slate-500">{owner.submittedAt}</td>
+                    <td className="border-t border-[#cfcfcf] px-4 py-4 text-slate-500">{owner.expiresAt}</td>
                     <td className="border-t border-[#cfcfcf] px-4 py-4">
                       {owner.proofUrl ? (
                         <button

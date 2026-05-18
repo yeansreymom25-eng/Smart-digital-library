@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { resolveStoredRole } from "@/src/lib/authRoles";
+import { getEffectiveAdminSubscriptionStatus } from "@/src/lib/adminSubscription";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -66,6 +67,36 @@ export async function proxy(request: NextRequest) {
 
     if (isAdmin && (isReaderRoute(pathname) || pathname.startsWith("/super-admin"))) {
       return NextResponse.redirect(new URL("/library-owner/dashboard", request.url));
+    }
+
+    if (isAdmin && pathname.startsWith("/library-owner") && pathname !== "/library-owner/subscription") {
+      const adminSupabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { cookies: { getAll: () => request.cookies.getAll(), setAll: () => {} } }
+      );
+
+      const { data: subscription } = await adminSupabase
+        .from("subscriptions")
+        .select("status, submitted_at, updated_at")
+        .eq("user_id", user.id)
+        .order("submitted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const effectiveStatus = getEffectiveAdminSubscriptionStatus(
+        subscription
+          ? {
+              status: subscription.status as "active" | "pending" | "rejected" | "not_selected" | "expired",
+              submittedAt: (subscription.submitted_at as string) ?? null,
+              updatedAt: (subscription.updated_at as string) ?? null,
+            }
+          : null
+      );
+
+      if (effectiveStatus === "expired" || effectiveStatus === "not_selected" || effectiveStatus === "rejected") {
+        return NextResponse.redirect(new URL("/library-owner/subscription", request.url));
+      }
     }
 
     if (!isAdmin && !isSuperAdmin && (pathname.startsWith("/library-owner") || pathname.startsWith("/super-admin"))) {

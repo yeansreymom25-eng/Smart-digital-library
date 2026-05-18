@@ -2,7 +2,10 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import AdminSubscriptionClient from "@/components/admin/AdminSubscriptionClient";
 import type { AdminSubscription } from "@/src/lib/adminSubscription";
-import { DEFAULT_ADMIN_SUBSCRIPTION } from "@/src/lib/adminSubscription";
+import {
+  DEFAULT_ADMIN_SUBSCRIPTION,
+  getEffectiveAdminSubscriptionStatus,
+} from "@/src/lib/adminSubscription";
 
 export default async function AdminSubscriptionPage() {
   const cookieStore = await cookies();
@@ -31,11 +34,14 @@ export default async function AdminSubscriptionPage() {
           ? data.plan
           : null;
       const status =
-        data.status === "active" || data.status === "pending" || data.status === "rejected"
+        data.status === "active" ||
+        data.status === "pending" ||
+        data.status === "rejected" ||
+        data.status === "expired"
           ? data.status
           : "not_selected";
 
-      subscription = {
+      const nextSubscription = {
         plan,
         status,
         proofFileName: (data.proof_url as string) ?? "",
@@ -43,6 +49,11 @@ export default async function AdminSubscriptionPage() {
         paymentNote: "",
         submittedAt: (data.submitted_at as string) ?? null,
         updatedAt: (data.updated_at as string) ?? null,
+      };
+
+      subscription = {
+        ...nextSubscription,
+        status: getEffectiveAdminSubscriptionStatus(nextSubscription),
       };
     }
   }
