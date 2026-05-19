@@ -26,10 +26,10 @@ export async function GET(request: NextRequest) {
   const [booksResponse, categoriesResponse] = await Promise.all([
     supabase
       .from("books")
-      .select("id, title, author, cover_url, category, description")
+      .select("id, title, author, cover_url, category")
       .eq("status", "Published")
       .or(
-        `title.ilike.${pattern},author.ilike.${pattern},category.ilike.${pattern},description.ilike.${pattern}`
+        `title.ilike.${pattern},author.ilike.${pattern},category.ilike.${pattern}`
       )
       .order("created_at", { ascending: false })
       .limit(8),
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     author: String(row.author ?? ""),
     imageSrc: String(row.cover_url ?? ""),
     category: String(row.category ?? ""),
-    description: String(row.description ?? ""),
+    description: "",
   }));
 
   const categories = (categoriesResponse.data ?? []).map((row) => ({
