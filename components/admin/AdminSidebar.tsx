@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-import { adminNavigation } from "@/src/lib/adminNavigation";
+import { getAdminNavigationForPlan } from "@/src/lib/adminNavigation";
+import type { AdminPlanName } from "@/src/lib/adminSubscription";
 import { useLogout } from "@/src/hooks/useLogout";
 
 function NavIcon({ title }: { title: string }) {
@@ -83,6 +84,13 @@ function NavIcon({ title }: { title: string }) {
   }
 }
 
+function parsePlanLabel(plan: string): AdminPlanName | null {
+  if (plan.startsWith("Premium")) return "Premium";
+  if (plan.startsWith("Pro")) return "Pro";
+  if (plan.startsWith("Normal")) return "Normal";
+  return null;
+}
+
 export default function AdminSidebar({
   plan = "No Plan",
   ownerName = "Library Owner",
@@ -103,7 +111,7 @@ export default function AdminSidebar({
       .join("") || "LO";
   }, [ownerName]);
 
-  const navItems = adminNavigation.filter(
+  const navItems = getAdminNavigationForPlan(parsePlanLabel(plan)).filter(
     (item) => item.title !== "Overview" && item.title !== "Subscription"
   );
 

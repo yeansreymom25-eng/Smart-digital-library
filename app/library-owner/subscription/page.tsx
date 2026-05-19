@@ -4,6 +4,7 @@ import AdminSubscriptionClient from "@/components/admin/AdminSubscriptionClient"
 import type { AdminSubscription } from "@/src/lib/adminSubscription";
 import {
   DEFAULT_ADMIN_SUBSCRIPTION,
+  getAdminSubscriptionExpiresAt,
   getEffectiveAdminSubscriptionStatus,
 } from "@/src/lib/adminSubscription";
 
@@ -49,11 +50,17 @@ export default async function AdminSubscriptionPage() {
         paymentNote: "",
         submittedAt: (data.submitted_at as string) ?? null,
         updatedAt: (data.updated_at as string) ?? null,
+        expiresAt: null,
       };
+      const effectiveStatus = getEffectiveAdminSubscriptionStatus(nextSubscription);
 
       subscription = {
         ...nextSubscription,
-        status: getEffectiveAdminSubscriptionStatus(nextSubscription),
+        status: effectiveStatus,
+        expiresAt: getAdminSubscriptionExpiresAt({
+          ...nextSubscription,
+          status: effectiveStatus,
+        }),
       };
     }
   }

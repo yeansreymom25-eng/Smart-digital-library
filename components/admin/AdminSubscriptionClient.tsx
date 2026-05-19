@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import type { AdminPlanName, AdminSubscription } from "@/src/lib/adminSubscription";
+import type { AdminSubscription } from "@/src/lib/adminSubscription";
+import { getAdminSubscriptionDaysLeft } from "@/src/lib/adminSubscription";
 import { getSupabaseBrowserClient } from "@/src/lib/supabaseBrowser";
 
 type Plan = {
@@ -23,19 +24,19 @@ const plans: Plan[] = [
     name: "Normal", price: "$0", period: "/month",
     subtitle: "Basic features for small libraries", label: "Basic features",
     icon: "spark", iconTone: "lime",
-    features: ["Dashboard with basic stats", "Up to 20 books", "User management", "Book management", "Category management", "Basic support"],
+    features: ["5 admin tabs", "Up to 20 books", "Dashboard with basic stats", "Book management", "Category management", "Basic support"],
   },
   {
     name: "Pro", price: "$9.99", period: "/month",
     subtitle: "Advanced features for growing libraries", label: "Advanced features",
     icon: "bolt", iconTone: "sky",
-    features: ["All Normal features", "Up to 50 books", "Transaction management", "Payment verification", "Analytics & charts", "Priority support", "Export reports"],
+    features: ["7 admin tabs", "All Normal features", "Up to 50 books", "Reader user monitoring", "Transaction management", "Payment verification", "Priority support"],
   },
   {
     name: "Premium", price: "$19.99", period: "/month",
     subtitle: "Complete solution for professional libraries", label: "Complete features",
     icon: "crown", iconTone: "amber",
-    features: ["All Pro features", "Unlimited books", "Advanced analytics", "Detailed reporting", "Custom reports", "API access", "24/7 support", "White-label option"],
+    features: ["9 admin tabs", "All Pro features", "Unlimited books", "Advanced analytics", "Detailed reporting", "Custom reports", "API access", "24/7 support"],
   },
 ];
 
@@ -110,6 +111,14 @@ export default function AdminSubscriptionClient({
         : null;
   const hasExistingPlan = Boolean(activePlan);
   const isCurrentPlanSelected = selectedPlan?.name === activePlan;
+  const daysLeft = getAdminSubscriptionDaysLeft(initialSubscription);
+  const expiresLabel = initialSubscription.expiresAt
+    ? new Date(initialSubscription.expiresAt).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
   const pageEyebrow = isOnboarding ? "Library Owner Onboarding" : "Subscription";
   const pageTitle = isOnboarding
     ? "Subscribe to Manage Your Digital Library"
@@ -124,7 +133,7 @@ export default function AdminSubscriptionClient({
           badge: "Active plan",
           tone: "border-[#9fe0b2] bg-[#edf9f0] text-[#2f7d42]",
           body: activePlan
-            ? `Your current subscription is ${activePlan} Plan. You can keep it or choose another plan below to submit a change.`
+            ? `Your current subscription is ${activePlan} Plan. You can keep it, downgrade to reduce available tabs, or choose another paid plan below. Your saved library data is kept when plan access changes.`
             : "Your subscription is active.",
         }
       : subscriptionStatus === "pending"
@@ -178,7 +187,8 @@ export default function AdminSubscriptionClient({
         const result = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(result?.error ?? "Unable to update subscription.");
       }
-      router.push("/library-owner/dashboard");
+      setSubscriptionStatus("active");
+      window.location.assign("/library-owner/dashboard");
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Unable to update subscription.");
     } finally {
@@ -331,6 +341,14 @@ export default function AdminSubscriptionClient({
                   <p>
                     Status: <span className="font-semibold capitalize">{subscriptionStatus.replace("_", " ")}</span>
                   </p>
+                  {daysLeft !== null ? (
+                    <p className="mt-1 font-semibold text-slate-900">
+                      {daysLeft} {daysLeft === 1 ? "day" : "days"} left
+                    </p>
+                  ) : null}
+                  {expiresLabel ? (
+                    <p className="mt-1 text-xs text-slate-500">Expires: {expiresLabel}</p>
+                  ) : null}
                   {initialSubscription.updatedAt ? (
                     <p className="mt-1 text-xs text-slate-500">Last updated: {new Date(initialSubscription.updatedAt).toLocaleString()}</p>
                   ) : null}

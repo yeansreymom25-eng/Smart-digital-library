@@ -3,14 +3,11 @@ import { createServerClient } from "@supabase/ssr";
 import BookRecordForm from "@/components/admin/BookRecordForm";
 import type { AdminCategory } from "@/src/lib/adminCategories";
 import Link from "next/link";
-import { getUsableAdminPlan } from "@/src/lib/adminSubscription";
-
-function getPlanLimit(plan: string | null): number {
-  if (plan === "Premium") return Infinity;
-  if (plan === "Pro") return 50;
-  if (plan === "Normal") return 20;
-  return 0;
-}
+import {
+  getEffectiveAdminSubscriptionStatus,
+  getPlanBookLimit,
+  getUsableAdminPlan,
+} from "@/src/lib/adminSubscription";
 
 export default async function NewBookPage() {
   const cookieStore = await cookies();
@@ -25,18 +22,33 @@ export default async function NewBookPage() {
   // Get subscription
   const { data: sub } = await supabase
     .from("subscriptions")
-    .select("plan, status")
+    .select("plan, status, submitted_at, updated_at")
     .eq("user_id", user?.id ?? "")
     .order("submitted_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const plan = getUsableAdminPlan(
-    sub?.plan === "Normal" || sub?.plan === "Pro" || sub?.plan === "Premium"
-      ? { plan: sub.plan, status: sub.status === "active" || sub.status === "pending" || sub.status === "rejected" ? sub.status : "not_selected" }
+  const status = getEffectiveAdminSubscriptionStatus(
+    sub
+      ? {
+          status:
+            sub.status === "active" ||
+            sub.status === "pending" ||
+            sub.status === "rejected" ||
+            sub.status === "expired"
+              ? sub.status
+              : "not_selected",
+          submittedAt: (sub.submitted_at as string) ?? null,
+          updatedAt: (sub.updated_at as string) ?? null,
+        }
       : null
   );
-  const limit = getPlanLimit(plan);
+  const plan = getUsableAdminPlan(
+    sub?.plan === "Normal" || sub?.plan === "Pro" || sub?.plan === "Premium"
+      ? { plan: sub.plan, status }
+      : null
+  );
+  const limit = getPlanBookLimit(plan);
 
   // Count only THIS admin's books
   const { count: bookCount } = await supabase

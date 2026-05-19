@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { getUsableAdminPlan } from "@/src/lib/adminSubscription";
-
-function getPlanLimit(plan: string | null): number {
-  if (plan === "Premium") return Infinity;
-  if (plan === "Pro") return 50;
-  if (plan === "Normal") return 20;
-  return 0;
-}
+import {
+  getEffectiveAdminSubscriptionStatus,
+  getPlanBookLimit,
+  getUsableAdminPlan,
+} from "@/src/lib/adminSubscription";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,18 +22,33 @@ export async function POST(request: NextRequest) {
     // Check subscription
     const { data: sub } = await supabase
       .from("subscriptions")
-      .select("plan, status")
+      .select("plan, status, submitted_at, updated_at")
       .eq("user_id", user.id)
       .order("submitted_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    const plan = getUsableAdminPlan(
-      sub?.plan === "Normal" || sub?.plan === "Pro" || sub?.plan === "Premium"
-        ? { plan: sub.plan, status: sub.status === "active" || sub.status === "pending" || sub.status === "rejected" ? sub.status : "not_selected" }
+    const status = getEffectiveAdminSubscriptionStatus(
+      sub
+        ? {
+            status:
+              sub.status === "active" ||
+              sub.status === "pending" ||
+              sub.status === "rejected" ||
+              sub.status === "expired"
+                ? sub.status
+                : "not_selected",
+            submittedAt: (sub.submitted_at as string) ?? null,
+            updatedAt: (sub.updated_at as string) ?? null,
+          }
         : null
     );
-    const limit = getPlanLimit(plan);
+    const plan = getUsableAdminPlan(
+      sub?.plan === "Normal" || sub?.plan === "Pro" || sub?.plan === "Premium"
+        ? { plan: sub.plan, status }
+        : null
+    );
+    const limit = getPlanBookLimit(plan);
 
     if (limit === 0) {
       return NextResponse.json({ error: "You need an active plan to add books." }, { status: 403 });

@@ -16,6 +16,7 @@ export type AdminSubscription = {
   paymentNote: string;
   submittedAt: string | null;
   updatedAt: string | null;
+  expiresAt: string | null;
 };
 
 export const DEFAULT_ADMIN_SUBSCRIPTION: AdminSubscription = {
@@ -26,6 +27,7 @@ export const DEFAULT_ADMIN_SUBSCRIPTION: AdminSubscription = {
   paymentNote: "",
   submittedAt: null,
   updatedAt: null,
+  expiresAt: null,
 };
 
 export const ADMIN_SUBSCRIPTION_DAYS = 30;
@@ -75,6 +77,22 @@ export function getEffectiveAdminSubscriptionStatus(
   return Date.now() > Date.parse(expiresAt) ? "expired" : "active";
 }
 
+export function getAdminSubscriptionDaysLeft(
+  subscription: Pick<AdminSubscription, "status" | "expiresAt"> | null
+) {
+  if (!subscription || subscription.status !== "active" || !subscription.expiresAt) {
+    return null;
+  }
+
+  const expiresTime = Date.parse(subscription.expiresAt);
+  if (Number.isNaN(expiresTime)) {
+    return null;
+  }
+
+  const diffMs = expiresTime - Date.now();
+  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+}
+
 function getClient() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -108,10 +126,12 @@ function rowToSubscription(row: Record<string, unknown> | null): AdminSubscripti
     submittedAt: (row.submitted_at as string) ?? null,
     updatedAt: (row.updated_at as string) ?? null,
   };
+  const effectiveStatus = getEffectiveAdminSubscriptionStatus(subscription);
 
   return {
     ...subscription,
-    status: getEffectiveAdminSubscriptionStatus(subscription),
+    status: effectiveStatus,
+    expiresAt: getAdminSubscriptionExpiresAt({ ...subscription, status: effectiveStatus }),
   };
 }
 
@@ -174,7 +194,9 @@ export async function activateAdminPlan(userId: string, plan: AdminPlanName): Pr
     paymentNote: "",
     submittedAt: null,
     updatedAt: new Date().toISOString(),
+    expiresAt: null,
   };
+  nextValue.expiresAt = getAdminSubscriptionExpiresAt(nextValue);
 
   await writeAdminSubscription(userId, nextValue);
   return nextValue;
@@ -198,6 +220,7 @@ export async function submitAdminPlanForReview(
     paymentNote: input.paymentNote,
     submittedAt: now,
     updatedAt: now,
+    expiresAt: null,
   };
 
   await writeAdminSubscription(userId, nextValue);
@@ -213,7 +236,9 @@ export async function updateAdminPlanReviewStatus(
     ...current,
     status,
     updatedAt: new Date().toISOString(),
+    expiresAt: null,
   };
+  nextValue.expiresAt = getAdminSubscriptionExpiresAt(nextValue);
 
   await writeAdminSubscription(userId, nextValue);
   return nextValue;

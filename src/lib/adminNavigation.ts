@@ -42,7 +42,7 @@ export const adminNavigation: AdminNavItem[] = [
     title: "Users",
     href: "/library-owner/users",
     description: "Monitor reader accounts and account status.",
-    plans: ["Normal", "Pro", "Premium"],
+    plans: ["Pro", "Premium"],
   },
   {
     title: "Transactions",
@@ -54,7 +54,7 @@ export const adminNavigation: AdminNavItem[] = [
     title: "Analytics",
     href: "/library-owner/analytics",
     description: "Charts and performance insights for the library.",
-    plans: ["Pro", "Premium"],
+    plans: ["Premium"],
   },
   {
     title: "Reports",
@@ -71,6 +71,6 @@ export const adminNavigation: AdminNavItem[] = [
 ];
 
 export function getAdminNavigationForPlan(plan: AdminPlanName | null) {
-  const activePlan = plan ?? "Normal";
-  return adminNavigation.filter((item) => item.plans.includes(activePlan));
+  if (!plan) return [];
+  return adminNavigation.filter((item) => item.plans.includes(plan));
 }
