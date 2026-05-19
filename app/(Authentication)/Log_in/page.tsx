@@ -112,19 +112,10 @@ export default function LoginPage() {
             >
               <Image src="/User_Image/google.png" alt="Google" width={26} height={26} />
             </button>
-            <button
-              type="button"
-              onClick={() => void handleSocialLogin("apple")}
-              disabled={socialLoading !== null}
-              className="rounded-full p-2 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Continue with Apple"
-            >
-              <Image src="/User_Image/apple.png" alt="Apple" width={46} height={46} />
-            </button>
           </div>
           {socialLoading && (
             <p className="mt-3 text-center text-xs text-zinc-500">
-              Redirecting to {socialLoading === "google" ? "Google" : "Apple"}...
+              Redirecting to Google...
             </p>
           )}
           <p className="mt-4 text-center text-xs text-zinc-500">

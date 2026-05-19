@@ -233,17 +233,11 @@ export default function SignupPage() {
                 onClick={() => void handleSocialSignup("google")}
                 disabled={socialLoading !== null}
               />
-              <SocialIcon
-                src="/User_Image/apple.png"
-                alt="Apple"
-                onClick={() => void handleSocialSignup("apple")}
-                disabled={socialLoading !== null}
-              />
             </div>
 
             {socialLoading ? (
               <p className="text-center text-[11px] text-zinc-500">
-                Redirecting to {socialLoading === "google" ? "Google" : "Apple"}...
+                Redirecting to Google...
               </p>
             ) : null}
 
